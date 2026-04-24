@@ -10,7 +10,7 @@ format:
 course: Capstone Projects in Data Science
 bibliography: references.bib # file contains bibtex for references
 #always_allow_html: true # this allows to get PDF with HTML features
-self-contained: true
+self-contained: false
 execute: 
   warning: false
   message: false
