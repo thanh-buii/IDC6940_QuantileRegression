@@ -209,11 +209,7 @@ pre.interval.stroket
 - QR displays better coverage in different levels of prediction intervals.
 - As the prediction intervals increase, OLS overly covers the real number of observations actually in the intervals.
 - There are other predictors that can affect stroke outcomes that are not included in this study.
-
-\begin{center}
-Thank You!
-\end{center}
-
+- Thank you!
 ```{r}
 
 ```
