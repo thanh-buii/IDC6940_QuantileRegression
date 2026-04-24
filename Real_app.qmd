@@ -1,0 +1,255 @@
+---
+title: "Data Analysis"
+format:
+  html:
+    embed-resources: true 
+    self-contained-math: true 
+    html-math-method: mathjax
+editor: visual
+---
+
+```{r eval = T, warning = F, message = F}
+library(tidycensus)
+library(tidyverse)
+readRenviron("~/.Renviron")
+library(tmap)
+library(tigris)
+library(sf)
+library(spdep)
+library(gstat)
+library(nlme)
+library(spatialreg)
+library(ggplot2)
+library(RColorBrewer)
+library(patchwork)
+library(GWmodel)
+tmap_mode("view")
+library(quantreg)
+library(gamboostLSS)
+library(caret)
+library(e1071)
+options(tigris_use_cache = TRUE)
+```
+
+[https://www.ncei.noaa.gov/access/monitoring/climate-at-a-glance/county/time-series/CA-037/tavg/8/12/1895-2024?base_prd=true&begbaseyear=1901&endbaseyear=2000&utm](https://www.ncei.noaa.gov/access/monitoring/climate-at-a-glance/county/time-series/CA-037/tavg/8/12/1895-2024?base_prd=true&begbaseyear=1901&endbaseyear=2000&utm_source=chatgpt.com)
+
+<https://aqs.epa.gov/aqsweb/airdata/download_files.html#Annual>
+
+[Public Use Microdata Survey Variable Explanation](https://www2.census.gov/programs-surveys/acs/tech_docs/pums/data_dict/PUMS_Data_Dictionary_2024.pdf)
+
+```{r eval = T, warning = F, message = F}
+# aqi <- read.csv("~/Downloads/annual_aqi_by_county_2023.csv")
+# geo_fl <- get_acs(geography = "county", year = 2023, 
+#                   output = "wide", geometry = TRUE,
+#                   variables = c(
+#                     median_income = "B19013_001E",
+#                     poverty_total = "B17001_001E",
+#                     poverty_bad = "B17001_002E",
+#                     bachelor = "B15003_022E",
+#                     master = "B15003_023",
+#                     doctor = "B15003_025",
+#                     professional = "B15003_024",
+#                     education = "B15003_001E",
+#                     unemployed = "B23025_005E",
+#                     labor_force = "B23025_003E",
+#                     not_in_force = "B23025_007E"
+#                   ))
+```
+
+JWMNP Numeric 3 Travel time to work bbb .N/A (not a worker or worker who worked from home) 1..200 .1 to 200 minutes to get to work (Top-coded)
+
+JWTRNS Character 2 Means of transportation to work bb .N/A (not a worker-not in the labor force, including persons .under 16 years; unemployed; employed, with a job but not at .work; Armed Forces, with a job but not at work) 01 .Car, truck, or van 02 .Bus 03 .Subway or elevated rail 04 .Long-distance train or commuter rail 05 .Light rail, streetcar, or trolley 06 .Ferryboat 07 .Taxi or ride-hailing services 08 .Motorcycle 09 .Bicycle 10 .Walked 11 .Worked from home 12 .Other method
+
+COW Character 1 Class of worker b .N/A (less than 16 years old/NILF who last worked more than 5 .years ago or never worked) 1 .Employee of a private for-profit company or business, or of an .individual, for wages, salary, or commissions 2 .Employee of a private not-for-profit, tax-exempt, or .charitable organization 3 .Local government employee (city, county, etc.) 4 .State government employee 5 .Federal government employee 6 .Self-employed in own not incorporated business, professional .practice, or farm 7 .Self-employed in own incorporated business, professional .practice or farm 8 .Working without pay in family business or farm 9 .Unemployed and last worked 5 years ago or earlier or never .worked
+
+SSIP Numeric 5 Supplementary Security Income past 12 months (use ADJINC to adjust SSIP to constant dollars) bbbbb .N/A (less than 15 years old) 0 .None 4..30000 .\$4 to \$30000 (Rounded and top-coded) SSP Numeric 5 Social Security income past 12 months (use ADJINC to adjust SSP to constant dollars) bbbbb .N/A (less than 15 years old) 0 .None 4..55000 .\$4 to \$55000 (Rounded and top-coded) WAGP Numeric 6 Wages or salary income past 12 months (use ADJINC to adjust WAGP to constant dollars) bbbbbb .N/A (less than 15 years old) 0 .None 4..999999 .\$4 to 999999 (Rounded and top-coded)
+
+WAGP Numeric 6 Wages or salary income past 12 months (use ADJINC to adjust WAGP to constant dollars) bbbbbb .N/A (less than 15 years old) 0 .None 4..999999 .\$4 to 999999 (Rounded and top-coded)
+
+Model:
+
+```{r eval = T, warning = F, message = F}
+pums_data <- get_pums(variables = c(
+  "PUMA",
+  "JWMNP",     # Commute time
+  "JWTRNS",    # Mean of travel
+  "SCHL",      # Educational attainment
+  "MAR",       # Marital status
+  "PAOC",      # Presence and age of own children (proxy for young <6)
+  "WAGP",      # Wage and salary income
+  "WKHP",      # Usual hours worked per week
+  "WKWN",      # Weeks worked in past 12 months
+  "ADJINC"
+  ),
+  state = "FL",           
+  survey = "acs5",        
+  year = 2023, 
+  recode = TRUE
+)
+```
+
+```{r eval = T, warning = F, message = F}
+clean_data <- pums_data %>%
+  filter(
+    !is.na(JWMNP),
+    JWTRNS == "03",
+    WAGP > 0,
+    WKHP >= 1,
+    WKWN >= 1
+  ) %>% 
+  mutate(
+    ADJINC = as.numeric(as.character(ADJINC)),
+    adj_wagp = WAGP * (ADJINC / 1000000),
+    hourly_wage = adj_wagp / (WKWN * WKHP),
+    ln_wage = log(hourly_wage)
+  ) %>%
+  mutate(
+    has_child = factor(case_when(
+      PAOC %in% c(
+        "With own children under 6 years only",
+        "With own children under 6 years and 6 to 17 years",
+        "With own children 6 to 17 years only"
+      ) ~ "Has Child",
+      PAOC == "No own children under 18 years" ~ "No Child",
+      TRUE ~ NA_character_
+    )),
+    has_young_child = factor(case_when(
+      PAOC %in% c(
+        "With own children under 6 years only",
+        "With own children under 6 years and 6 to 17 years"
+      ) ~ "Has Young Child (<6)",
+      PAOC %in% c(
+        "No own children under 6 years",
+        "With own children 6 to 17 years only"
+      ) ~ "No Young Child",
+      TRUE ~ NA_character_
+    ))
+  ) %>%
+  mutate(
+    educ_level = case_when(
+      SCHL %in% c(
+        "No schooling completed", "Nursery school, preschool",
+        "Kindergarten", "Grade 1", "Grade 2", "Grade 3", "Grade 4",
+        "Grade 5", "Grade 6", "Grade 7", "Grade 8", "Grade 9",
+        "Grade 10", "Grade 11", "12th grade - no diploma"
+      ) ~ "Less than HS",
+      SCHL %in% c(
+        "Regular high school diploma", "GED or alternative credential",
+        "Some college, but less than 1 year", "1 or more years of college credit, no degree",
+        "Associate's degree"
+      ) ~ "HS or Some College",
+      SCHL == "Bachelor's degree" ~ "Bachelor's",
+      SCHL %in% c(
+        "Master's degree", "Professional degree beyond a bachelor's degree",
+        "Doctorate degree"
+      ) ~ "Graduate",
+      TRUE ~ "Other"
+    ) %>% factor(),
+    married = factor(ifelse(
+      MAR %in% c("Married", "Married, spouse absent"),
+      "Married",
+      "Not Married"
+    ))
+  ) 
+# %>%
+#   filter(
+#     hourly_wage > quantile(hourly_wage, 0.1, na.rm = TRUE),
+#     hourly_wage < quantile(hourly_wage, 0.9, na.rm = TRUE)
+#   )
+```
+
+```{r}
+ggplot(clean_data, aes(x = JWMNP)) +
+  geom_histogram(aes(y = after_stat(density)), bins = 30, fill = "steelblue", color = "white") +
+  geom_density(color = "red", linewidth = 1.5) +
+  labs(
+    title = "Distribution of Commute Time",
+    x = "Commute Time (minutes)",
+    y = "Density"
+  ) +
+  theme_minimal()
+
+ggplot(clean_data, aes(x = WAGP)) +
+  geom_histogram(bins = 60, fill = "steelblue", color = "black") +
+  labs(title = "Income Distribution", x = "Wage and Salary Income", y = "Count") +
+  theme_minimal()
+```
+
+```{r eval = T, warning = F, message = F}
+commute_by_puma <- clean_data %>%
+  group_by(PUMA) %>%
+  summarise(mean_commute = mean(JWMNP, na.rm = TRUE), .groups = "drop")
+
+acs_puma <- get_acs(
+  geography = "public use microdata area",
+  variables = c(medincome = "B19013_001"),
+  state = "FL",
+  year = 2023,
+  survey = "acs5"
+)
+
+merged <- clean_data %>%
+  left_join(acs_puma, by = c("PUMA" = "GEOID"))
+```
+
+```{r eval = T, warning = F, message = F}
+ggplot(merged) + geom_sf(aes(fill = JWMNP)) +
+  scale_fill_gradientn(colors = brewer.pal(9, 'Purples')) +
+  theme_minimal()
+```
+
+```{r}
+commute_by_puma <- clean_data %>%
+  group_by(PUMA) %>%
+  summarise(
+    mean_commute = mean(JWMNP, na.rm = TRUE),
+    median_commute = median(JWMNP, na.rm = TRUE),
+    n = n(),
+    .groups = "drop"
+  )
+
+fl_pumas <- pumas(
+  state = "FL",
+  year = 2023,
+  class = "sf"
+)
+
+map_data <- fl_pumas %>%
+  mutate(PUMA = as.character(PUMACE20)) %>%
+  left_join(commute_by_puma, by = "PUMA")
+
+ggplot(map_data) +
+  geom_sf(aes(fill = mean_commute), color = "white", linewidth = 0.2) +
+  scale_fill_viridis_c(na.value = "grey90") +
+  labs(
+    title = "Average Commute Time by PUMA in Florida",
+    fill = "Minutes"
+  ) +
+  theme_minimal()
+
+ggplot(map_data) +
+  geom_sf(aes(fill = median_commute), color = "white", linewidth = 0.2) +
+  scale_fill_viridis_c(na.value = "grey90") +
+  labs(
+    title = "Median Commute Time by PUMA in Florida",
+    fill = "Minutes"
+  ) +
+  theme_minimal()
+```
+
+```{r eval = T, warning = F, message = F}
+# data_name = read.csv(url("https://hbiostat.org/data/repo/bodyfat.csv"))
+
+pm25_fl <- read_csv("~/Downloads/ad_viz_plotval_data.csv")
+ozone_fl <- read_csv("~/Downloads/ad_viz_plotval_data (1).csv")
+length(unique(ozone_fl$County))
+```
+
+```{r eval = T, warning = F, message = F}
+plot(data$`Daily Mean PM2.5 Concentration`,data$Date)
+```
+
+```{r eval = T, warning = F, message = F}
+
+
+```

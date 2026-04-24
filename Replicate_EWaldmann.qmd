@@ -1,0 +1,204 @@
+---
+title: "Untitled"
+format: html
+editor: visual
+---
+
+## Real Data Analysis
+
+### Cleaning
+
+```{r eval = T, warning = F, message = F}
+library(tidycensus)
+library(tidyverse)
+readRenviron("~/.Renviron")
+library(tmap)
+library(tigris)
+library(sf)
+library(spdep)
+library(R2BayesX)
+tmap_mode("view")
+options(tigris_use_cache = TRUE)
+```
+
+```{r eval = T, warning = F, message = F}
+library(gamboostLSS)
+library(quantreg)
+library(mboost)
+data("india")
+head(india, n = 2)
+```
+
+```{r eval = T, warning = F, message = F}
+par(mrow = c(1, 2))
+plot(stunting ~ cage, data = india, cex = 0.5) 
+plot(stunting ~ mbmi, data = india, cex = 0.5)
+```
+
+```{r eval = T, warning = F, message = F}
+# head(india.bnd, n = 1)
+# joined <- india.bnd %>% left_join(india, by = c("mcdist" = ))
+
+
+neighborhood <- bnd2gra(india.bnd)
+# head(neighborhood, n = 1)
+
+```
+
+```{r}
+library(gamboostLSS)
+library(quantreg)
+library(mboost)
+data("india")
+
+neighborhood <- bnd2gra(india.bnd)
+
+ctrl <- boost_control(mstop = c(mu = 200, sigma = 50), trace = TRUE)
+mod <- gamboostLSS(stunting ~ bbs(cage) + bbs(mbmi) + bmrf(mcdist, bnd = neighborhood),
+                   data = india, families = GaussianLSS(), 
+                   control = ctrl)
+
+cvr <- cvrisk(mod, grid = make.grid(max = c(mu = 2000, sigma = 500)))
+mstop(cvr)
+mod <- mod[mstop(cvr)]
+plot(mod)
+```
+
+```{r}
+# Get fitted μ and σ per district
+mu_district  <- tapply(fitted(mod, parameter = "mu",  which = "mcdist"), 
+                       india$mcdist, mean) * 600
+sigma_district <- tapply(fitted(mod, parameter = "sigma", which = "mcdist"), 
+                         india$mcdist, mean) * 600
+
+plotdata <- data.frame(region = names(mu_district),
+                       mean_stunting = mu_district,
+                       sd_stunting   = sigma_district)
+
+# Draw the two maps (mean stunting + variability)
+par(mfrow = c(1, 2))
+drawmap(plotdata, map = india.bnd, regionvar = "region",
+        plotvar = "mean_stunting", main = "Mean stunting by district")
+drawmap(plotdata, map = india.bnd, regionvar = "region",
+        plotvar = "sd_stunting",   main = "Variability (σ) by district")
+```
+
+```{r eval = T, warning = F, message = F}
+taus <- c(0.01, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.99)
+
+models <- list()
+for (tau in taus) {
+  cat("Fitting tau =", tau, "...\n")
+  models[[as.character(tau)]] <- gamboost(stunting ~ bbs(cage, df = 6) + bbs(mbmi, df = 6) +
+                                            bmrf(mcdist, bnd = neighborhood, df = 6),
+                                          data = india, family = QuantReg(tau = tau),
+                                          control = boost_control(mstop = 1000, trace = FALSE)
+                                          )
+}
+cvr <- cvrisk(models[[tau = "0.5"]], grid = 500:2000)
+mstop(cvr)
+```
+
+```{r eval = T, warning = F, message = F}
+plot(models[["0.5"]])
+
+coef(models[["0.5"]])
+```
+
+```{r eval = T, warning = F, message = F}
+par(mrow = c(4, 3))
+for (tau in names(models)) {
+  mod <- models[[tau]]
+  district_avg <- tapply(fitted(mod), india$mcdist, mean)
+  plotdata <- data.frame(region = names(district_avg), q_value = district_avg)
+  drawmap(plotdata, map = india.bnd, regionvar = "region", plotvar = "q_value", main = paste("Stunting at tau =", tau))
+}
+```
+
+```{r eval = T, warning = F, message = F}
+library(mboost)
+# library(R2BayesX)
+library(ggplot2)
+library(dplyr)
+
+# Load data (you already have this)
+data("india", package = "gamboostLSS")
+data("india.bnd", package = "gamboostLSS")
+
+# Fit just the median and low-tail models (quick, no spatial for speed)
+mod_median <- gamboost(stunting ~ bbs(cage) + bbs(mbmi), 
+                       data = india, 
+                       family = QuantReg(tau = 0.5),
+                       control = boost_control(mstop = 500))
+
+mod_low <- gamboost(stunting ~ bbs(cage) + bbs(mbmi), 
+                    data = india, 
+                    family = QuantReg(tau = 0.1),
+                    control = boost_control(mstop = 500))
+
+# Get residuals and gradients after 1st boosting round (for clarity)
+# Note: mboost doesn't expose gradients directly, but we can compute 'em
+
+# Final fitted values (after 500 iterations)
+pred_median <- fitted(mod_median)  # this is a vector now, length = nrow(india)
+pred_low    <- fitted(mod_low)
+
+# Now residuals work
+residuals_median <- india$stunting - pred_median
+residuals_low    <- india$stunting - pred_low
+
+# Gradients (same as before)
+grad_median <- sign(residuals_median)  # +1, -1, 0
+
+grad_low <- ifelse(residuals_low > 0, 0.1 - 1, 0.1)  # -0.9 or +0.1                    # +1, -1, or 0
+
+# For tau=0.1: gradient = -1 if residual > 0, else 1 (asymmetric!)
+# QuantReg gradient is actually: tau - I(residual > 0)
+# But simplified: pushes hard on low tail
+# residuals_low <- india$stunting - fitted(mod_low)[,1]
+# grad_low <- ifelse(residuals_low > 0, tau - 1, tau)          # tau=0.1 → -0.9 or +0.1
+
+# Make a data frame
+plot_df <- data.frame(
+  residual_median = residuals_median,
+  gradient_median = grad_median,
+  residual_low = residuals_low,
+  gradient_low = grad_low,
+  stunting = india$stunting
+)
+
+# Plot 1: Median (tau=0.5) — classic sign flip
+p1 <- ggplot(plot_df, aes(x = residual_median, y = gradient_median)) +
+  geom_point(alpha = 0.3, color = "blue") +
+  geom_hline(yintercept = 0, lty = 2, color = "grey") +
+  labs(title = "Gradients at tau = 0.5 (Median)",
+       x = "Residual (Actual - Predicted)", 
+       y = "Gradient (how to adjust next tree)") +
+  theme_minimal()
+
+# Plot 2: Low tail (tau=0.1) — asymmetric, cares more about negative residuals
+p2 <- ggplot(plot_df, aes(x = residual_low, y = gradient_low)) +
+  geom_point(alpha = 0.3, color = "red") +
+  geom_hline(yintercept = 0, lty = 2, color = "grey") +
+  labs(title = "Gradients at tau = 0.1 (Bottom 10%)",
+       x = "Residual (Actual - Predicted)", 
+       y = "Gradient") +
+  theme_minimal()
+
+# Show both
+# gridExtra::grid.arrange(p1, p2, ncol = 2)
+library(patchwork)
+p1 + p2
+```
+
+```{r eval = T, warning = F, message = F}
+
+```
+
+```{r eval = T, warning = F, message = F}
+
+```
+
+```{r eval = T, warning = F, message = F}
+
+```

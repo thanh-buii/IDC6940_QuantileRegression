@@ -1,0 +1,222 @@
+---
+title: "Untitled"
+format: html
+editor: visual
+---
+
+```{r eval = T, warning = F, message = F}
+library(tidycensus)
+library(tidyverse)
+readRenviron("~/.Renviron")
+library(tmap)
+library(tigris)
+library(sf)
+library(spdep)
+library(gstat)
+library(nlme)
+library(spatialreg)
+library(ggplot2)
+library(RColorBrewer)
+library(patchwork)
+library(GWmodel)
+tmap_mode("view")
+library(quantreg)
+library(gamboostLSS)
+library(caret)
+library(e1071)
+options(tigris_use_cache = TRUE)
+```
+
+```{r eval = T, warning = F, message = F}
+data <- read_csv("~/Downloads/sleep_health_dataset.csv")
+table(data$country)
+```
+
+```{r}
+data1 <- data %>% filter(country == "USA",
+                         gender %in% c("Female", "Male")) %>% select(-country)
+```
+
+```{r}
+table(data1$occupation)
+```
+
+```{r}
+glimpse(data1)
+```
+
+```{r}
+data2 <- data1 %>% select(where(is.numeric), -person_id)
+```
+
+```{r}
+hist(data2$cognitive_performance_score)
+```
+
+```{r eval = T, warning = F, message = F}
+library(ggplot2)
+library(quantreg)
+
+vars <- setdiff(names(data2), "cognitive_performance_score")
+
+for (i in vars) {
+  if (is.numeric(data2[[i]])) {
+
+    tmp <- data2[, c(i, "cognitive_performance_score")]
+    tmp <- na.omit(tmp)
+    names(tmp) <- c("x", "y")
+
+    if (length(unique(tmp$x)) > 5) {
+      g <- ggplot(tmp, aes(x = x, y = y)) +
+        geom_point(alpha = 0.3, color = "gold") +
+        geom_smooth(method = "loess", formula = y ~ x, color = "black", linewidth = 1) +
+        geom_quantile(quantiles = 0.5, color = "blue") +
+        geom_quantile(quantiles = 0.25, linetype = "dashed", color = "red") +
+        geom_quantile(quantiles = 0.75, linetype = "dashed", color = "red") +
+        labs(x = i, y = "cognitive_performance_score", title = i) +
+        theme_minimal()
+
+      print(g)
+
+      # Constant variances
+      lm1 <- lm(data2[[i]] ~ cognitive_performance_score, data = data2)
+      plot(lm1, which = 1)
+    }
+  }
+}
+```
+
+```{r}
+cor_matrix <- cor(data2, use = "complete.obs")
+round(cor_matrix, 2)
+library(corrplot)
+dev.new(width = 10, height = 10)
+corrplot(cor_matrix, method = "color", type = "upper",
+         order = "hclust",
+         tl.cex = 0.6,
+         tl.srt = 45,
+         addCoef.col = "black", number.cex = 0.4, 
+         p.mat = cor.mtest(data2)$p,
+         sig.level = 0.05,
+         insig = "blank")
+```
+
+```{r}
+data3 <- data2 %>% select(-felt_rested)
+lm <- lm(cognitive_performance_score ~ ., data = data2)
+# vif(lm)
+```
+
+```{r eval = T, warning = F, message = F}
+null_model <- lm(cognitive_performance_score ~ 1, data = data2)
+full_model <- lm(cognitive_performance_score ~ ., data = data2)
+
+step_model <- step(null_model, 
+                   scope = list(lower = null_model, upper = full_model),
+                   direction = "forward")
+```
+
+```{r}
+library(ggplot2)
+
+data4 <- data1 %>% group_by(occupation) %>% summarise(mean_sleep_quality = mean(sleep_quality_score))
+ggplot(data4, aes(x = reorder(occupation, mean_sleep_quality), y = mean_sleep_quality)) +
+  geom_col(fill = "steelblue") +
+  coord_flip() +
+  theme_minimal()
+```
+
+```{r}
+anova_model <- aov(sleep_quality_score ~ occupation, data = data1)
+summary(anova_model)
+```
+
+How to pysical activity, stress and sleep quality affect cognitive performance,
+
+```{r}
+data1 <- data1 %>% select(-person_id)
+```
+
+```{r}
+library(leaps)
+
+# Fit all subset models
+regfit <- regsubsets(cognitive_performance_score ~ ., data = data2, nvmax = ncol(data2) - 1)
+
+# Extract subset summary
+regsum <- summary(regfit)
+
+# Variable names used by regsubsets output
+vars <- colnames(regsum$which)
+
+# Remove intercept from candidate predictors
+pred_vars <- setdiff(vars, "(Intercept)")
+
+# Build all lm models from regsubsets results
+models <- list()
+aic_vals <- numeric(nrow(regsum$which))
+
+for (i in 1:nrow(regsum$which)) {
+  chosen <- pred_vars[regsum$which[i, pred_vars]]
+  
+  if (length(chosen) == 0) {
+    form <- cognitive_performance_score ~ 1
+  } else {
+    form <- as.formula(
+      paste("cognitive_performance_score ~", paste(chosen, collapse = " + "))
+    )
+  }
+  
+  models[[i]] <- lm(form, data = data2)
+  aic_vals[i] <- AIC(models[[i]])
+}
+
+# Best model by AIC
+best_idx <- which.min(aic_vals)
+best_model <- models[[best_idx]]
+
+# Inspect
+AIC(best_model)
+formula(best_model)
+summary(best_model)
+```
+
+```{r}
+library(quantreg)
+
+formula <- cognitive_performance_score ~ 
+  age + bmi + sleep_duration_hrs + sleep_quality_score +
+  deep_sleep_percentage + exercise_day + steps_that_day +
+  stress_score
+
+lm2 <- lm(formula, data = data1)
+
+taus <- c(0.10, 0.25, 0.50, 0.75, 0.90)
+
+qr_models <- lapply(taus, function(tau) {
+  rq(formula, data = data1, tau = tau, method = "br")
+})
+
+y_true <- data1$cognitive_performance_score
+
+pred_lm <- predict(lm2, newdata = data1)
+
+pred_rq <- lapply(qr_models, function(m) {
+  predict(m, newdata = data1)
+})
+
+mae <- function(y, yhat) mean(abs(y - yhat), na.rm = TRUE)
+
+mae_lm <- mae(y_true, pred_lm)
+
+mae_rq <- sapply(pred_rq, function(p) mae(y_true, p))
+names(mae_rq) <- paste0("tau_", taus)
+
+mae_lm
+mae_rq
+```
+
+```{r}
+plot(data = data1, sleep_quality_score ~ sleep_duration_hrs)
+
+```

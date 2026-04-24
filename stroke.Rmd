@@ -1,0 +1,246 @@
+---
+title: "Untitled"
+author: "Thanh Bui"
+date: "2026-04-15"
+output: html_document
+---
+
+### Data exploration
+
+```{r eval = T, warning = F, message = F}
+library(tidyverse)
+library(tigris)
+library(broom)
+library(dplyr)
+library(car)
+library(quantreg)
+library(sf)
+```
+
+This study uses county-level data from the contiguous United States for the year 2022. The outcome variable in this study is the crude prevalence of stroke (STROKE), measured as the percentage of adults in a county who have ever been told by a healthcare professional that they had a stroke. This variable is derived from model-based small-area estimates and is expected to be skewed in real-world county-level data. This means that some counties tend to have relatively low stroke prevalence, while a smaller number of counties—often those with higher concentrations of risk factors—exhibit substantially elevated rates. Because of this skewness and the presence of potential outliers, ordinary least squares (OLS) regression, which focuses on the conditional mean, may be sensitive to extreme values. Therefore, we compare OLS estimates with quantile regression at the median (τ = 0.5), which provides a more robust estimate of the central tendency and is less influenced by extreme observations.
+
+* STROKE — Crude prevalence (%) of adults who have ever been told by a doctor that they had a stroke. This measure comes from the CDC PLACES: Local Data for Better Health, County Data 2024 release, which provides model-based small-area estimates derived from the 2022 Behavioral Risk Factor Surveillance System (BRFSS). We used the crude prevalence estimates (Data_Value_Type == "Crude prevalence" and MeasureId == "STROKE").
+
+The following predictors are included in the analysis (all obtained from the 2022 County Health Rankings & Roadmaps analytic dataset):
+
+* smoke: Adult smoking prevalence (raw value) — percentage of adults who are current smokers. Smoking is a well-established major modifiable risk factor for stroke.
+* diabetes_prev: Diabetes prevalence (raw value) — percentage of adults aged 18 and older with diagnosed diabetes.
+* obesity_prev: Adult obesity prevalence (raw value) — percentage of adults with a body mass index ≥ 30 kg/m².
+* air_pollution: Average daily density of fine particulate matter (PM2.5) in µg/m³.
+* physical_inactive: Physical inactivity prevalence (raw value) — percentage of adults who reported no leisure-time physical activity.
+
+Counties with missing stroke prevalence were excluded from the analysis.
+The final dataset is cross-sectional and ecological in nature (county-level aggregates). Stroke prevalence is right-skewed, with most counties showing relatively low prevalence but a smaller number of counties exhibiting substantially higher rates. This skewness motivated the comparison between ordinary least squares (OLS) regression and quantile regression.
+
+```{r eval = T, warning = F, message = F}
+# 1. PLACES Stroke data
+data2 <- read_csv("~/Downloads/PLACES__Local_Data_for_Better_Health__County_Data_2024_release.csv") %>%
+  filter(MeasureId == "STROKE",
+         Data_Value_Type == "Crude prevalence",
+         Year == 2022) %>%
+  select(
+    countyID = LocationID,
+    STROKE = Data_Value,
+    state = StateAbbr,
+    county = LocationName
+  ) %>%
+  distinct() %>%
+  mutate(countyID = as.character(countyID))
+
+# 2. County Health Rankings / analytic data
+data11 <- read_csv("~/Downloads/analytic_data2022.csv") %>%
+  select(
+    countyID = `5-digit FIPS Code`,
+    obesity_prev = `Adult obesity raw value`,
+    physical_inactive = `Physical inactivity raw value`,
+    air_pollution = `Air pollution - particulate matter raw value`,
+    diabetes_prev = `Diabetes prevalence raw value`,
+    smoke = `Adult smoking raw value` 
+  ) %>%
+  mutate(countyID = as.character(countyID))
+
+# 3. County boundaries
+bound_data <- counties(cb = TRUE, year = 2022, class = "sf") %>%
+  select(countyID = GEOID) %>%
+  mutate(countyID = as.character(countyID))
+
+# 4. Final merge
+data <- bound_data %>%
+  left_join(data2, by = "countyID") %>%
+  left_join(data11, by = "countyID") %>%
+  filter(!is.na(STROKE)) %>%
+  select(countyID, state, county, STROKE, 
+         smoke, obesity_prev, physical_inactive, 
+         air_pollution, diabetes_prev, geometry)
+
+# Check result
+glimpse(data)
+summary(data)
+colSums(is.na(data))
+```
+
+After merging the CDC PLACES stroke data with the County Health Rankings analytic file and county boundary information, several data cleaning steps were performed. All key variables were converted to numeric format to ensure compatibility with regression modeling. Rows containing missing values were removed, and the spatial geometry column was droppedto simplify this regression analysis. The final analytic sample consisted of 3,103 counties with complete information on stroke prevalence and all predictors. There were no remaining missing values in the outcome variable (STROKE) or the primary predictors after cleaning.
+
+To examine the bivariate relationships among variables, a correlation matrix was computed. As anticipated, stroke prevalence showed moderate to strong positive correlations with adult smoking, diabetes prevalence, and physical inactivity. The correlation matrix below with high correlation value between physical_inactive vs. obesity_prev and physical_inactive vs. diabetes_prev shows potential multicollinearity prior to regression modeling. These steps ensured that the dataset was properly prepared for subsequent ordinary least squares (OLS) and quantile regression analyses.
+
+```{r}
+data <- data %>%
+  mutate(
+    countyID = as.numeric(countyID),
+    smoke = as.numeric(smoke),
+    obesity_prev = as.numeric(obesity_prev),
+    physical_inactive = as.numeric(physical_inactive),
+    air_pollution = as.numeric(air_pollution),
+    diabetes_prev = as.numeric(diabetes_prev)
+  ) %>% st_drop_geometry() %>%
+  na.omit()
+nrow(data)
+sum(is.na(data$STROKE)) 
+sum(is.na(data$smoke)) 
+cor(data %>% select(STROKE, smoke, obesity_prev, physical_inactive, 
+                    air_pollution, diabetes_prev), use = "complete.obs") 
+```
+Next, we plot the histogram of STROKE to see the behavior of the distribution. With longer right tailed, STROKE is positive skewed. Since positive skewness violates the requirement of OLS, we will still fit STROKE by OLS and Median regression to compare the robustness. Though there is skewness, STROKE still has a bell shape very close to normal distribution. Thus, in this analysis, we expect the skewness can be remained in the residuals of OLS with small value of skew, thus there is a high chance that we will have similar results between fitting OLS and median regression.
+```{r}
+hist(data$STROKE)
+hist(data$smoke)
+hist(data$obesity_prev)
+hist(data$diabetes_prev)
+# skew <- moments::skewness(error)
+```
+
+Since we suspect there is at least one multicollinearity, we perform vif test on several models, with and without physical_inactive or diabetes_prev. For the full model, vif(physical_inactive) surpasses 5, the recommend threhold to detect multicollinearity. The second model vif of all variables improves once physical_inactive is removed. The third model with diabetes_prev removed does not show much vif improvement even though multicollinearity is removed. Therefore, model two will be used to fit OLS and median regression.
+```{r}
+model_vif <- lm(STROKE ~ smoke + diabetes_prev + obesity_prev + air_pollution + physical_inactive, data = data)
+vif(model_vif)
+```
+
+
+```{r}
+model_vif <- lm(STROKE ~ smoke + diabetes_prev + obesity_prev + air_pollution, data = data)
+vif(model_vif)
+```
+
+
+```{r}
+model_vif <- lm(STROKE ~ smoke + obesity_prev + air_pollution  + physical_inactive, data = data)
+vif(model_vif)
+```
+
+
+### Data Modeling
+
+With same linear formula, the results of fitting OLS and median regression are as follows. Both of models illustrate that obesity is uninfluential on STROKE prevalence. Adult smoking prevalence and diabetes prevalence show strong positive associations with stroke rates, while air pollution exhibit a significant negative association. The coefficients between two models are very similar, for example, smoking prevalence is OLS: 10.91 and QR: 11.02, and diabetes prevalence is  QR: 13.51 and OLS: 14.40 in OLS, suggesting that its effect on the typical county is somewhat weaker than its influence on the mean. The intercept was also slightly lower in the median regression (1.01 vs. 1.10), which is expected given the right-skewed distribution of stroke prevalence. These findings suggest that while OLS provides a good overall fit, quantile regression at the median offers more robust estimates in the presence of right-skewed outcome variable.
+
+```{r}
+ols_model <- lm(STROKE ~ smoke + diabetes_prev + obesity_prev + air_pollution, 
+                data = data)
+skew_error <- moments::skewness(resid(ols_model))
+skew_y     <- moments::skewness(data$STROKE)
+
+qr_median <- rq(STROKE ~ smoke + diabetes_prev + obesity_prev + air_pollution, 
+                tau = 0.5, data = data)
+
+cat("###### OLS Model #######")
+summary(ols_model)
+
+cat("\n####### Median Regression ######\n")
+summary(residuals(qr_median))
+summary(qr_median, se = "boot")
+```
+
+This table shows a row by row coefficient values of two models.
+```{r}
+skew_error
+skew_y
+```
+
+```{r}
+ols_coefs <- tidy(ols_model) %>%
+  mutate(Model = "OLS", 
+         estimate = round(estimate, 4),
+         std.error = round(std.error, 4))
+
+qr_coefs <- tidy(qr_median) %>%
+  mutate(Model = "QR Median", 
+         estimate = round(estimate, 4),
+         std.error = round(std.error, 4))
+
+comparison <- bind_rows(ols_coefs, qr_coefs) %>%
+  select(term, Model, estimate, std.error, p.value = p.value) %>%
+  arrange(term, Model)
+
+print(comparison)
+```
+Model performance is evaluated using MAE and RMSE. The quantile regression at the median shows a slightly lower MAE (0.4761) than OLS (0.4780), suggesting marginally better prediction for typical observations (US counties). These results confirm that although both models yield similar conclusions, quantile regression at the median is more robust to the right-skewed nature of stroke prevalence. Although RMSE of OLS is lower than median regression, it should only be meaningful if the outcome variable has normal distribution.
+
+```{r}
+ols_resid  <- residuals(ols_model)
+qr_resid   <- residuals(qr_median)
+
+mae_ols <- mean(abs(ols_resid))
+mae_qr  <- mean(abs(qr_resid))
+
+rmse_ols <- sqrt(mean(ols_resid^2))
+rmse_qr  <- sqrt(mean(qr_resid^2))
+
+# Print nice table
+comparison_metrics <- data.frame(
+  Model = c("OLS (Mean)", "QR Median (τ=0.5)"),
+  MAE   = round(c(mae_ols, mae_qr), 4),
+  RMSE  = round(c(rmse_ols, rmse_qr), 4)
+)
+print(comparison_metrics)
+```
+
+### Coefficient Heterogeneity Plot
+
+Since we have confirm that median regression provides close fit as OLS. In this section, we will check for coefficient homogeneity across the SMOKE prevalence. The figures below visualize how the estimated effects of each predictor vary across the distribution of stroke rates, $\tau^{th} = 0.25, 0.50, 0.75, 0.90$, compared to the single OLS estimate (horizontal dashed lines). This plot directly illustrates the heterogeneity that OLS misses due to the right-skewed nature of stroke prevalence 
+
+Diabetes_prev shows the clearest heterogeneity. The effect strengthens dramatically as we move to higher quantiles: from approximately 10.5 percentage points at the 25th percentile to over 21 percentage points at the 90th percentile. Since the OLS coefficient estimate (≈ 14.4) lies in the middle constantly, it understates the increasing impact in high-stroke counties and overstates it in low-stroke counties. This suggests diabetes is a particularly strong driver in counties that already have elevated stroke rates.
+
+Smoke exhibits the opposite pattern. The effect is strongest at lower quantiles (≈ 11.6 at 0.25) and weakens substantially at higher quantiles (dropping to ≈ 9.5 at 0.90). The OLS estimate (≈ 10.9) again represents an average effect, not the actually changing trend of smoke
+
+Air_pollution displays least heterogeneity, although QR still shows more fluctuate effect of air_pollution on STROKE while OLS displays unchangable influence. The negative association becomes stronger from 0.25 (≈ –0.07) to 0.75 (≈ –0.115), then slightly weakens at 0.90.
+
+Oobesity_prev shows essentially no heterogeneity and remains near zero across all quantiles, consistent with its non-significance in both OLS and median regression.
+
+Because stroke prevalence is right-skewed, OLS provides a single “average” effect that is pulled by extreme high-stroke counties. Meanwhile, quantile regression reveals the actually heterogeneity: diabetes has a much larger impact in the upper tail (where stroke rates are already high), while smoking has a relatively larger effect among lower-stroke counties. These patterns would be completely invisible using OLS alone.
+```{r}
+taus <- c(0.25, 0.5, 0.75, 0.90)
+
+qr_multi <- rq(STROKE ~ smoke + diabetes_prev + air_pollution, 
+               tau = taus, data = data)
+
+coef_table <- tidy(qr_multi, se.type = "nid") %>%
+  mutate(
+    estimate = round(estimate,  4),
+    std.error = round(std.error, 4),
+    p.value = round(p.value,   4)
+  ) %>%
+  filter(term != "(Intercept)") %>%
+  select(tau, term, estimate, std.error, p.value) %>%
+  arrange(term, tau)
+
+print(coef_table)
+
+# Optional: Plot to visualize heterogeneity (very useful for presentation)
+library(ggplot2)
+
+ggplot(coef_table, aes(x = tau, y = estimate, color = term, group = term)) +
+  geom_point(size = 3) +
+  geom_line() +
+  geom_hline(data = tidy(ols_model) %>% filter(term != "(Intercept)"),
+             aes(yintercept = estimate, color = term), linetype = "dashed") +
+  facet_wrap(~ term, scales = "free_y") +
+  labs(title = "Coefficient Heterogeneity Across Quantiles vs OLS (dashed)",
+       x = "Quantile (τ)", y = "Estimate") +
+  theme_minimal()
+```
+
+
+
+```{r}
+
+```
+

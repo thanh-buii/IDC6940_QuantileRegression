@@ -1,0 +1,416 @@
+---
+title: "Untitled"
+format: html
+editor: visual
+---
+
+```{r eval = T, warning = F, message = F}
+library(tidycensus)
+library(tidyverse)
+readRenviron("~/.Renviron")
+library(tmap)
+library(tigris)
+library(sf)
+library(spdep)
+library(gstat)
+library(nlme)
+library(spatialreg)
+library(ggplot2)
+library(RColorBrewer)
+library(patchwork)
+library(GWmodel)
+tmap_mode("view")
+library(quantreg)
+library(gamboostLSS)
+library(caret)
+library(e1071)
+library(car)
+options(tigris_use_cache = TRUE)
+```
+
+<https://catalog.data.gov/dataset/places-place-data-gis-friendly-format-2020-release-4a44e>
+
+```{r eval = T, warning = F, message = F}
+data1 <- read_csv("~/Downloads/PLACES__Local_Data_for_Better_Health__County_Data_2024_release.csv")
+data2 <- data1 %>% select(
+  Year,
+  GEOID = Geolocation,
+  state = StateAbbr,
+  county = LocationName,
+  countyID = LocationID,
+  STROKE = Data_Value,
+  Data_Value_Type,
+  MeasureId,
+) %>% filter(MeasureId == "STROKE",
+             Data_Value_Type == "Crude prevalence",
+             Year == 2022,
+             !is.na(county)
+             ) %>% distinct() %>% select(- Year, - MeasureId)
+```
+
+```{r}
+# unique(data1$MeasureId)
+```
+
+```{r}
+data3 <- data1 %>% filter(MeasureId == "CSMOKING",
+             Data_Value_Type == "Crude prevalence",
+             Year == 2022,
+             !is.na(LocationID)
+             ) %>% 
+  distinct() %>% select(
+  countyID = LocationID,
+  SMOKE = Data_Value
+)
+```
+
+<https://www.countyhealthrankings.org/health-data/methodology-and-sources/data-documentation/national-data-documentation-2010-2023>
+
+```{r eval = T, warning = F, message = F}
+data10 <- read_csv("~/Downloads/analytic_data2022.csv")
+data11 <- data10 %>% select(
+  countyID = `5-digit FIPS Code`,
+  obesity_prev = `Adult obesity raw value`,
+  physical_inactive = `Physical inactivity raw value`,
+  air_pollution = `Air pollution - particulate matter raw value`,
+  diabetes_prev = `Diabetes prevalence raw value`,
+) %>% distinct()
+```
+
+```{r eval = T, warning = F, message = F}
+bound_data <- counties(cb = TRUE, year = 2022, class = "sf") %>%
+  select(countyID = GEOID, geometry)
+```
+
+```{r eval = T, warning = F, message = F}
+data <- bound_data %>%
+  left_join(data2, by = "countyID") %>%
+  left_join(data3, by = "countyID") %>%
+  left_join(data11, by = "countyID")
+```
+
+```{r}
+data20 <- data %>%
+  filter(!substr(countyID, 1, 2) %in% c("02", "15"))
+
+data21 <- data %>%
+  filter(!substr(countyID, 1, 2) %in% c(
+    "02", "15",  # AK, HI
+    "60", "66", "69", "72", "78"  # territories
+  ))
+
+ggplot(data21) +
+  geom_sf(aes(fill = STROKE), color = NA) +
+  # coord_sf(
+  #   xlim = c(-130, -65),
+  #   ylim = c(24, 50),
+  #   expand = FALSE
+  # ) +
+  scale_fill_viridis_c(na.value = "grey90") +
+  theme_minimal()
+```
+
+```{r}
+all(st_is_valid(data21))
+```
+
+```{r eval = T, warning = F, message = F}
+# neighbor contiguity by poly2nb HW2
+nb_queen <- poly2nb(data21)
+nb_rook <- poly2nb(data21, queen = FALSE)
+```
+
+```{r}
+# data21[card(nb_queen) == 0, c("countyID", "county", "state")]
+```
+
+```{r}
+# Checking I to see if the autocorrelation is + -
+# listW <- nb2listw(nb_queen, style = "W", zero.policy = TRUE)
+# global_I <- moran(data21$STROKE, listW, n = length(data21$STROKE), S0 = sum(listw2mat(listW)))$I
+# cat("Moran's I:", global_I)
+# 
+# moran.test(data21$STROKE, listW)
+# moran.mc(data21$STROKE, listW, nsim = 999, alternative = "greater")
+```
+
+```{r eval = T, warning = F, message = F}
+# local_I <- localmoran(data21$STROKE, listW, zero.policy = TRUE, alternative = "greater")
+# data21$Local_I <- local_I[, "Ii"]
+# data21$Local_I_p <- local_I[, "Pr(z > E(Ii))"]
+```
+
+```{r}
+# moran.plot(data21$STROKE, listW, xlab = "STROKE", 
+#            ylab = "Spatially lagged Z",
+#            main = "Moran plot — US Stroke % by County")
+```
+
+```{r}
+# # Identify the significant autocorrletion locations
+# data21 <- data21 %>%
+#   mutate(LISA_sig = case_when(
+#     Local_I_p <= 0.01 ~ "p <= 0.01",
+#     Local_I_p <= 0.05 ~ "p <= 0.05",
+#     TRUE ~ "Not significant"
+#     )
+#   )
+# 
+# # Create the cluster sections
+# z <- scale(data21$STROKE, center = TRUE, scale = TRUE)[,1]
+# lag_z <- lag.listw(listW, z)
+# 
+# data21 <- data21 %>%
+#   mutate(LISA_type = case_when(
+#     z > 0 & lag_z > 0 ~ "High-High",
+#     z < 0 & lag_z < 0 ~ "Low-Low",
+#     z > 0 & lag_z < 0 ~ "High-Low",
+#     z < 0 & lag_z > 0 ~ "Low-High"
+#     )
+#   )
+# data21$LISA_type = ifelse(data21$Local_I_p <= 0.05, data21$LISA_type, "Not significant")
+# 
+# # Check for error typing
+# # length(data$Local_I_p[data$Local_I_p<=0.05])
+# # 159 - length(data$LISA_type[data$LISA_type == "Not significant"])
+```
+
+```{r eval = T, warning = F, message = F}
+# LISA_map <- tm_shape(data21) +
+#   tm_polygons("Local_I",
+#               palette = "-BrBG", title = "Local Moran’s I",
+#               border.col = "gray50"
+#               ) +
+#   tm_layout(title = "Local Moran’s I for US STROKE %",
+#             title.position = c("center", "top"),
+#             legend.outside = TRUE, frame = FALSE, bg.color = "white"
+#             )
+# 
+# LISA_significance_map = tm_shape(data21) +
+#   tm_polygons("LISA_sig",
+#               palette = c("p <= 0.01" = "red", 
+#                           "p <= 0.05" = "yellow", 
+#                           "Not significant" = "white"),
+#               title = "LISA Significance", border.col = "black"
+#   ) +
+#   tm_layout(title = "LISA Significance clusters",
+#             title.position = c("center", "top"),
+#             legend.outside = TRUE, frame = FALSE, bg.color = "white"
+#   )
+# 
+# LISA_classified_map <- tm_shape(data21) +
+#   tm_polygons("LISA_type",
+#               palette = c("High-High"="#E41A1C", "Low-Low"="#377EB8",
+#               "High-Low"="#4DAF4A", "Low-High"="#984EA3",
+#               "Not significant"="white"),
+#               title = "LISA cluster type",
+#               border.col = "gray40"
+#   ) +
+#   tm_layout(title = "LISA cluster map (PctBach)",
+#             legend.outside = TRUE,
+#             frame = FALSE,
+#             title.position = c("center", "top")
+#   )
+# 
+# tmap_arrange(LISA_map, LISA_significance_map, LISA_classified_map)
+```
+
+```{r}
+data22 <- data %>%
+  filter(!substr(countyID, 1, 2) %in% c(
+    "02", "15",  # AK, HI
+    "60", "66", "69", "72", "78"  # territories
+  ))
+
+data22 <- data22 %>% select(-Data_Value_Type)
+names(data22)
+```
+
+```{r}
+data22 <- data22 %>%
+  mutate(across(
+    c(obesity_prev, physical_inactive, air_pollution, diabetes_prev),
+    as.numeric
+  )) %>%
+  mutate(across(
+    c(obesity_prev, physical_inactive, diabetes_prev),
+    ~ . * 100
+  ))
+
+data231 <- data22 %>% select(STROKE, SMOKE, obesity_prev, physical_inactive,
+                             air_pollution, diabetes_prev) %>% st_drop_geometry()
+
+cor_matrix <- cor(data231, use = "complete.obs")
+round(cor_matrix, 2)
+```
+
+```{r}
+library(corrplot)
+
+corrplot(cor_matrix, method = "color", type = "upper",
+         tl.cex = 0.8, number.cex = 0.7, addCoef.col = "black")
+```
+
+```{r eval = T, warning = F, message = F}
+pairs(data231 %>% 
+        dplyr::select(STROKE, SMOKE, obesity_prev, physical_inactive, air_pollution, diabetes_prev))
+```
+
+```{r}
+# data22 <- data22[complete.cases(st_drop_geometry(data22)[, vars]), ]
+```
+
+```{r eval = T, warning = F, message = F}
+m1 <- lm(SMOKE ~ STROKE + 
+           # physical_inactive + 
+           obesity_prev + diabetes_prev + air_pollution,
+         data = data22)
+vif(m1)
+qqnorm(m1$residuals)
+qqline(m1$residuals)
+nb_queen <- poly2nb(data22)
+listW <- nb2listw(nb_queen, style = "W", zero.policy = TRUE)
+moran.mc(residuals(m1), listw = listW, nsim = 999, alternative = "greater")
+```
+
+```{r eval = T, warning = F, message = F}
+fit_multi <- rq(
+  SMOKE ~ STROKE + 
+           # physical_inactive + 
+           obesity_prev + diabetes_prev + air_pollution,
+         data = data22,
+  tau = c(0.25, 0.5, 0.75),
+)
+
+summary(fit_multi, se = "boot")
+```
+
+```{r eval = T, warning = F, message = F}
+plot(summary(fit_multi))
+```
+
+```{r}
+nrow(data22)
+length(unique(data22$countyID))
+anyDuplicated(data22$countyID)
+
+colSums(is.na(st_drop_geometry(data22)[, c(
+  "STROKE", "SMOKE", "physical_inactive", "air_pollution", "diabetes_prev", "countyID"
+)]))
+```
+
+```{r eval = T, warning = F, message = F}
+vars <- c("countyID", "STROKE", "SMOKE", "physical_inactive", "air_pollution", "diabetes_prev")
+
+# 1) keep sf object for building neighbors
+data22_sf <- data22[, c(vars, "geometry")]
+
+# 2) plain data frame for modeling
+data22_df <- as.data.frame(st_drop_geometry(data22_sf))
+
+# 3) complete cases on plain data frame only
+cc <- complete.cases(data22_df)
+data22_sf_cc <- data22_sf[cc, ]
+data22_df_cc <- data22_df[cc, ]
+
+# 4) build neighbor structure from polygons
+nb <- poly2nb(data22_sf_cc)
+A <- nb2mat(nb, style = "B", zero.policy = TRUE)
+
+K <- -A
+diag(K) <- rowSums(A)
+
+rid <- as.character(data22_df_cc$countyID)
+rownames(K) <- rid
+colnames(K) <- rid
+
+# safer as factor
+data22_df_cc$countyID <- factor(rid, levels = rid)
+
+ctrl <- boost_control(mstop = 300, nu = 0.05, trace = TRUE)
+
+fit_gb <- gamboost(
+  SMOKE ~ bols(STROKE) +
+    bbs(physical_inactive) +
+    bbs(air_pollution) +
+    bbs(diabetes_prev) +
+    bmrf(countyID, bnd = K),
+  data = data22_df_cc,
+  family = QuantReg(tau = 0.5),
+  control = ctrl
+)
+```
+
+```{r}
+fit_gb_resid <- fit_gb$resid
+qqnorm(fit_multi$residuals)
+qqline(fit_multi$residuals)
+```
+
+```{r eval = T, warning = F, message = F}
+library(sf)
+library(spdep)
+library(mboost)
+
+vars <- c("GEOID", "STROKE", "SMOKE", "physical_inactive", "air_pollution", "diabetes_prev")
+
+data22_sf <- data22[, c(vars, "geometry")]
+data22_df <- as.data.frame(st_drop_geometry(data22_sf))
+
+cc <- complete.cases(data22_df)
+data22_sf_cc <- data22_sf[cc, ]
+data22_df_cc <- data22_df[cc, ]
+
+nb <- poly2nb(data22_sf_cc)
+A <- nb2mat(nb, style = "B", zero.policy = TRUE)
+
+K <- -A
+diag(K) <- rowSums(A)
+
+rid <- as.character(data22_df_cc$GEOID)
+rownames(K) <- rid
+colnames(K) <- rid
+
+data22_df_cc$GEOID <- factor(rid, levels = rid)
+
+ctrl <- boost_control(mstop = 300, nu = 0.05, trace = TRUE)
+
+fit_gb <- gamboost(
+  STROKE ~ 
+    bols(SMOKE) +
+    bbs(physical_inactive) +
+    bbs(air_pollution) +
+    bbs(diabetes_prev) +
+    bmrf(GEOID, bnd = K),
+  data = data22_df_cc,
+  family = QuantReg(tau = 0.5),
+  control = ctrl
+)
+
+```
+
+```         
+```
+
+```{r eval = T, warning = F, message = F}
+fit_gb <- fit_gb[mstop(cv)]
+pred <- predict(fit_gb, newdata = data22_df_cc)
+
+mae <- mean(abs(data22_df_cc$STROKE - pred))
+mae
+```
+
+```{r eval = T, warning = F, message = F}
+g <- ggplot(data1, aes(x = STROKE, y = SMOKE)) +
+        geom_point(alpha = 0.3, color = "gold") +
+        geom_smooth(method = "loess", formula = y ~ x, color = "black", linewidth = 1) +
+        geom_quantile(quantiles = 0.5, color = "blue") +
+        geom_quantile(quantiles = 0.25, linetype = "dashed", color = "red") +
+        geom_quantile(quantiles = 0.75, linetype = "dashed", color = "red") +
+        labs(x = i, y = "cognitive_performance_score", title = i) +
+        theme_minimal()
+```
+
+```{r}
+hist(data2$STROKE)
+```

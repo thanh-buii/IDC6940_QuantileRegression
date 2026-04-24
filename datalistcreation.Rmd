@@ -1,0 +1,347 @@
+---
+title: "Untitled"
+format: html
+editor: visual
+---
+
+Simulate data for Linear quantile regression
+
+Heteroskedastic error with increasing variance simulation
+
+OLS
+
+```{r eval = T, warning = F, message = F}
+# Library section
+library(quantreg)
+library(ggplot2)
+```
+
+```{r eval = T, warning = F, message = F}
+set.seed(479)
+sample_size <- c(50, 100, 200, 400, 600)
+repli <- 1000
+```
+
+```{r eval = T, warning = F, message = F}
+set.seed(479)
+# List of needed metrics
+coverage <- numeric(length(sample_size)) #set coverage with the same obs as sample size
+n_sizes <- length(sample_size)
+mean_slope <- numeric(n_sizes)
+sd_slope <- numeric(n_sizes)
+mean_se_slope  <- numeric(n_sizes)
+power <- numeric(n_sizes)
+
+# Slope by bootstrap
+slope_func <- function(data, indices) {
+  d <- data[indices, ]
+  fit <- lm(y ~ x, data = d)
+  coef(fit)[2]
+}
+
+# Looping areaaaaaaaa
+for (i in seq_along(sample_size)) {
+  chosen_size <- sample_size[i]
+  
+  coverage.estimate <- logical(repli)
+  slope <- numeric(repli)
+  se_slope <- numeric(repli)
+  error <- numeric(repli)
+  beta1.true <- 0.4
+  power_count <- logical(repli)
+
+  for (j in 1:repli) {
+    # data set creation
+    x <- runif(chosen_size, min = 0, max = 5)
+    y <- y <- 20 + 0.4 * x + rnorm(chosen_size, 0, 3.5) * (1 + x/7)
+    dat <- data.frame(x = x, y = y)
+    
+    # OLS
+    ols <- lm(y ~ x, data = dat)
+    slope[j] <- coef(ols)[2]
+    se_slope[j] <- summary(ols)$coefficients["x", "Std. Error"]
+    
+    # Build 95% confidence interval
+    ci_lower <- slope[j] - 1.96 * se_slope[j]
+    ci_upper <- slope[j] + 1.96 * se_slope[j]
+    
+    coverage.estimate[j] <- (ci_lower <= beta1.true) && (ci_upper >= beta1.true)
+    power_count[j] <- (summary(ols)$coefficients["x", "Pr(>|t|)"] < 0.05)
+    
+  }
+  
+  coverage[i] <- mean(coverage.estimate) * 100
+  mean_slope[i] <- mean(slope)
+  mean_se_slope[i] <- mean(se_slope)
+  sd_slope[i] <- sd(slope)
+  power[i] <- mean(power_count)*100
+}
+results <- data.frame(
+  n              = sample_size,
+  Mean_Slope     = round(mean_slope, 4),
+  SE_Slope       = round(mean_se_slope, 4),
+  Coverage_pct   = round(coverage, 1),
+  POWER = round(power, 1)
+)
+
+print("OLS")
+print(results)
+```
+
+```{r eval = T, warning = F, message = F}
+set.seed(479)
+
+beta_original <- 0.4
+eps_sig <- 3.5
+b <- 1/7
+taus <- c(0.25, 0.5, 0.75, 0.9)
+
+n_sizes <- length(sample_size)
+results <- list()
+
+for (tau in taus) {
+  cat("Quantile =", tau, "\n")
+  beta1.true <- beta_original + qnorm(tau) * eps_sig * b
+  cat("True slope =", beta1.true, "\n")
+  
+  n_sizes <- length(sample_size)
+  
+  coverage <- numeric(n_sizes)
+  power <- numeric(n_sizes)
+  mean_slope <- numeric(n_sizes)
+  sd_slope <- numeric(n_sizes)
+  mean_se_slope <- numeric(n_sizes)
+  qloss <- numeric(n_sizes)
+  
+  for (i in seq_along(sample_size)) {
+    n <- sample_size[i]
+  
+    coverage.estimate <- logical(repli)
+    slope <- numeric(repli)
+    se_slope <- numeric(repli)
+    error <- numeric(repli)
+    power_count <- logical(repli)
+    
+    for (j in 1:repli) {
+      x <- runif(n, min = 0, max = 5)
+      y <- 20 + 0.4 * x + rnorm(n, 0, 3.5) * (1 + x / 7)
+      
+      dat <- data.frame(x = x, y = y)
+      qr <- rq(y ~ x, tau = tau, data = dat)
+      
+      slope[j] <- coef(qr)[2]
+      
+      # Fixed: Use "nid" instead of "iid" (better for heteroskedasticity)
+      sum_rq <- summary(qr, se = "nid")
+      se_slope[j] <- sum_rq$coefficients["x", "Std. Error"]
+     
+      ci_lower <- slope[j] - 1.96 * se_slope[j]
+      ci_upper <- slope[j] + 1.96 * se_slope[j]
+      
+      coverage.estimate[j] <- (ci_lower <= beta1.true) && (ci_upper >= beta1.true)
+      error[j] <- mean(abs(dat$y - predict(qr, newdata = dat)))
+      power_count[j] <- sum_rq$coefficients["x", "Pr(>|t|)"] < 0.05
+    }
+    
+    coverage[i] <- mean(coverage.estimate, na.rm = TRUE) * 100
+    mean_slope[i] <- mean(slope, na.rm = TRUE)
+    mean_se_slope[i] <- mean(se_slope, na.rm = TRUE)
+    sd_slope[i] <- sd(slope, na.rm = TRUE)
+    qloss[i] <- mean(error, na.rm = TRUE)
+    power[i] <- mean(power_count, na.rm = TRUE) * 100
+  }
+  
+  results_tau <- data.frame(
+    n = sample_size,
+    Mean_Slope = round(mean_slope, 4),
+    SD_Slope = round(sd_slope, 4),
+    SE_Slope = round(mean_se_slope, 4),
+    Quantile_Loss = round(qloss, 4),
+    Coverage_pct = round(coverage, 1),
+    Power_pct = round(power, 1)
+  )
+  
+  results[[as.character(tau)]] <- results_tau
+  print(results_tau)
+  cat("\n")
+}
+```
+
+Skewed with constant variance simulation
+
+OLS
+
+```{r eval = T, warning = F, message = F}
+# library(sn) # library of skew to normal dsitribution
+set.seed(479)
+
+skewness <- c(0, 1, 2, 3, 6)
+beta1_original <- 0.4
+beta0_original <- 20
+
+sample_length <- length(sample_size)
+
+for (skew in skewness) {
+  cat("\nSkewness =", skew, "\n")
+ 
+  avg_slope          <- numeric(sample_length)
+  avg_bias_percent   <- numeric(sample_length)
+  coverage_percent   <- numeric(sample_length)
+  avg_interval_length<- numeric(sample_length)
+  power_percent      <- numeric(sample_length)
+  mae                <- numeric(sample_length)
+  
+  for (i in seq_along(sample_size)) {
+    n <- sample_size[i]
+    
+    slope            <- numeric(repli)
+    bias             <- numeric(repli)
+    coverage.estimate<- logical(repli)
+    interval_length  <- numeric(repli)
+    power            <- logical(repli)
+    absolute_bias    <- numeric(repli)
+    se_slope         <- numeric(repli)
+   
+    for (j in 1:repli) {
+      # Generate error
+      if (skew == 0) {
+        error <- rnorm(n, 0, 3.5)
+      } else {
+        shape <- 4 / skew^2
+        rate  <- sqrt(shape) / 3.5
+        error <- rgamma(n, shape = shape, rate = rate)
+        error <- error - shape / rate   # center to mean 0
+      }
+     
+      x <- runif(n, 0, 5)
+      y <- beta0_original + beta1_original * x + error
+      dat <- data.frame(x = x, y = y)
+     
+      ols <- lm(y ~ x, data = dat)
+      slope[j] <- coef(ols)[2]
+      
+      # Extract SE
+      se_slope[j] <- summary(ols)$coefficients["x", "Std. Error"]
+      
+      # Build 95% CI (fixed)
+      ci_lower <- slope[j] - 1.96 * se_slope[j]
+      ci_upper <- slope[j] + 1.96 * se_slope[j]
+      
+      # Coverage (fixed index)
+      coverage.estimate[j] <- (ci_lower <= beta1_original) && (ci_upper >= beta1_original)
+      
+      bias[j]          <- (slope[j] - beta1_original) / beta1_original * 100
+      interval_length[j] <- ci_upper - ci_lower
+      power[j]         <- summary(ols)$coefficients["x", "Pr(>|t|)"] < 0.05
+      
+      absolute_bias[j] <- abs(slope[j] - beta1_original) / beta1_original * 100
+    }
+    
+    # Summarize
+    avg_slope[i]           <- mean(slope)
+    avg_bias_percent[i]    <- mean(bias)
+    coverage_percent[i]    <- mean(coverage.estimate) * 100
+    avg_interval_length[i] <- mean(interval_length)
+    power_percent[i]       <- mean(power) * 100
+    mae[i]                 <- mean(absolute_bias)
+  }
+  
+  results <- data.frame(
+    n                  = sample_size,
+    avg_slope          = round(avg_slope, 4),
+    bias_percent       = round(avg_bias_percent, 4),
+    avg_interval_leng  = round(avg_interval_length, 4),
+    coverage_per       = round(coverage_percent, 2),   # changed to 2 decimals usually enough
+    power              = round(power_percent, 2),
+    mae                = round(mae, 4)
+  )
+  
+  print("OLS under skewness")
+  print(results)
+}
+```
+
+```{r eval = T, warning = F, message = F}
+typeI_results <- list()
+for (skew in skewness) {
+  cat("\nSkewness =", skew, "\n")
+  
+  typeI_rate        <- numeric(length(sample_size))   # currently unused
+  avg_slope         <- numeric(sample_length)
+  avg_bias_percent  <- numeric(sample_length)
+  coverage_percent  <- numeric(sample_length)
+  avg_interval_length <- numeric(sample_length)
+  power_percent     <- numeric(sample_length)
+  mae               <- numeric(sample_length)
+  
+  for (i in seq_along(sample_size)) {
+    n <- sample_size[i]
+    
+    slope          <- numeric(repli)
+    bias           <- numeric(repli)
+    coverage       <- logical(repli)
+    interval_length<- numeric(repli)
+    power          <- logical(repli)
+    absolute_bias  <- numeric(repli)
+    
+    for (j in 1:repli) {
+      # Error generation
+      if (skew == 0) {
+        error <- rnorm(n, 0, 3.5)
+      } else {
+        shape <- 4 / skew^2
+        rate  <- sqrt(shape) / 3.5
+        error <- rgamma(n, shape = shape, rate = rate)
+        error <- error - shape / rate   # center to mean 0
+      }
+      
+      x <- runif(n, 0, 5)
+      y <- beta0_original + beta1_original * x + error
+      dat <- data.frame(x = x, y = y)
+      
+      # Fit median quantile regression (tau = 0.5)
+      qr_fit <- rq(y ~ x, tau = 0.5, data = dat)
+      
+      slope[j] <- coef(qr_fit)[2]
+      bias[j]  <- (slope[j] - beta1_original) / beta1_original * 100
+      absolute_bias[j] <- abs(slope[j] - beta1_original) / beta1_original * 100
+      
+      # === Normal approximation CI (no bootstrap) ===
+      sum_qr <- summary(qr_fit, se = "nid")           # "nid" is recommended
+      se_slope <- sum_qr$coefficients["x", "Std. Error"]
+      
+      ci_lower <- slope[j] - 1.96 * se_slope
+      ci_upper <- slope[j] + 1.96 * se_slope
+      
+      coverage[j]       <- (ci_lower <= beta1_original) && (ci_upper >= beta1_original)
+      interval_length[j]<- ci_upper - ci_lower
+      power[j]          <- !(ci_lower <= 0 && ci_upper >= 0)
+    }
+    
+    # Summarize across replications
+    avg_slope[i]           <- mean(slope)
+    avg_bias_percent[i]    <- mean(bias)
+    coverage_percent[i]    <- mean(coverage) * 100
+    avg_interval_length[i] <- mean(interval_length)
+    power_percent[i]       <- mean(power) * 100
+    mae[i]                 <- mean(absolute_bias)
+  }
+  
+  results <- data.frame(
+    n                 = sample_size,
+    avg_slope         = round(avg_slope, 4),
+    bias_percent      = round(avg_bias_percent, 4),
+    avg_interval_leng = round(avg_interval_length, 4),
+    coverage_per      = round(coverage_percent, 2),
+    power             = round(power_percent, 2),
+    mae               = round(mae, 4)
+  )
+  
+  print("QR (Median, Normal Approx CI)")
+  print(results)
+}
+```
+
+```{r}
+
+```

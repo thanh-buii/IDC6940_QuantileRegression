@@ -1,7 +1,7 @@
 ---
-title: "Writing a great story for data science projects - Spring 2026 "
-subtitle: "This is a Report Template Quarto"
-author: "Student Name (Advisor: Dr. Cohen)"
+title: "Quantile Regression in Practice: Simulation, and an Application to Stroke Prevalence"
+subtitle: "IDC6940 Capstone"
+author: "Ngoc Bui (Advisor: Dr. Cohen)"
 date: '`r Sys.Date()`'
 format:
   html:
@@ -21,143 +21,287 @@ editor:
 Slides: [slides.html](slides.html){target="_blank"} ( Go to `slides.qmd`
 to edit)
 
-::: callout-important
-**Remember:** Your goal is to make your audience understand and care
-about your findings. By crafting a compelling story, you can effectively
-communicate the value of your data science project.
+## 1. Introduction
 
-Carefully read this template since it has instructions and tips to
-writing!
+This report introduces quantile regression (QR), a powerful alternative to the well-known original least squares regression (OLS). The main goal of this report is to compare the performance between OLS and QR through functions, simulations, and applications. One main difference between the two is the focus. OLS models the conditional means, which is easily influenced by outliers or influential values, of the target variable based on the predictors. Meanwhile, quantile regression (QR) models the conditional quantiles of the target variable and is robust to the outliers. In theory, linear regression (OLS) produces one single line, whose optimal coefficients are calculated as a result of minimizing the sum of squared errors (residuals). This line represents the changes in the average value of the target variable as the predictors change. Meanwhile, the quantile regression (QR) returns a different line for any chosen $\tau^{th}$ quantile of the target variable, such as the $10^{th}$, $50^{th}$, or $90^{th}$ percentile. When the assumptions of OLS are violated, such as when the target variable has heteroscedastic variance, one line modeling the average target is not representative of the variance [@koenker2005]. For its flexibility, QR reveals how the predictors affect not just the average but different parts of the distribution [@koenker2005; @Ashortstoryonhowandwhy].
 
-Nice report!
-:::
+Quantile regression was originally introduced as "regression quantiles" by [@regression1978], and the paper provides the mathematical theorems and the process for the regression. The robustness of quantile regression lies in its resilience to outliers and to cases when the distribution's prior assumptions are violated or unknown. As we all know, linear regression is famous and easy to interpret. However, we need to be certain about the distribution of the data or we need to transform it into one. From other well-known works, Koenker and Bassett showed that the least absolute error is a better indicator of how well a model could perform. Later, [@koenker2001] popularized the current "quantile regression" name and showcased its practical vale through the applications such as CEO pay, food expenditure, and infant birthweight. Throughout the years, Koenker kept updating his own development as well as others' findings in the field of quantile regression [@Koenker40].
 
-## Introduction
+Waldmann [@Ashortstoryonhowandwhy] provides a clear and simple view of how quantile regression works from the applied perspective. The three examples in her paper illustrate how quantile regression helps gain insights into how a change in the predictors affects different parts of the target variable differently. For example, in the analysis of child stunting in India, she shows that the effects of maternal BMI and geographic region are much stronger in the lower quantiles (severely stunted children) than at the mean. Though usually we want to know the average outcome of the target variable, we are more interested in the behavior of the lower 40% or upper 20% of it. For example, researchers would be more interested in the lower percentile of children's stunting distribution to assess the malnutrition situation [@Ashortstoryonhowandwhy] or the higher percentile for extreme temperature [@ExtremeTem13; @ExtremeTem22; @MasterClimate14]. [@areviewbiostats] provides a detailed summary of multiple quantile regression's approaches to independent data, time-to-event data and longitudinal data along with how QR produces insightful information.
 
-The introduction should:
+In the simulation, I will compare the performance of OLS and QR on linear regression, where skewness and heteroscedasticity exist. Different levels of skewness are applied to the residual distribution. Heteroscedasticity is also added through the residuals, which indirectly creates non-constant variance in the target variable. Besides simulation, simple applications of non-normal data are conducted to evaluate how OLS and QR perform in pratice.
 
--   Develop a storyline that captures attention and maintains interest.
+## 2. Methods
 
--   Your audience is your peers
-
--   Clearly state the problem or question you're addressing.
-
-<!-- -->
-
--   Introduce why it is relevant needs.
-
--   Provide an overview of your approach.
-
-Example of writing including citing references:
-
-*This is an introduction to ..... regression, which is a non-parametric
-estimator that estimates the conditional expectation of two variables
-which is random. The goal of a kernel regression is to discover the
-non-linear relationship between two random variables. To discover the
-non-linear relationship, kernel estimator or kernel smoothing is the
-main method to estimate the curve for non-parametric statistics. In
-kernel estimator, weight function is known as kernel function
-[@efr2008]. Cite this paper [@bro2014principal]. The GEE [@wang2014].
-The PCA [@daffertshofer2004pca]*. Topology can be used in machine
-learning [@adams2021topology]
-
-For Symbolic Regression [@wang2019symbolic] *This is my work and I want
-to add more work...*
-
-Cite new paper [@su2012linear]
-
-Classification of Knee OA was studied here [@guida2021knee]
-
-## Methods
-
--   Detail the models or algorithms used.
-
--   Justify your choices based on the problem and data.
-
-*The common non-parametric regression model is*
-$Y_i = m(X_i) + \varepsilon_i$*, where* $Y_i$ *can be defined as the sum
-of the regression function value* $m(x)$ *for* $X_i$*. Here* $m(x)$ *is
-unknown and* $\varepsilon_i$ *some errors. With the help of this
-definition, we can create the estimation for local averaging i.e.*
-$m(x)$ *can be estimated with the product of* $Y_i$ *average and* $X_i$
-*is near to* $x$*. In other words, this means that we are discovering
-the line through the data points with the help of surrounding data
-points. The estimation formula is printed below [@R-base]:*
-
+### 2.1 Quantile Loss Function
+For the purpose of this project, we focus on the simple quantile regression. The quantile regression is built on minimizing the mean absolute error. Let $F(x) = P(X \le x)$ be the cumulative distribution function (CDF) of a random variable X, and the associated quantile function is the inverse of the CDF. For $\tau$ be the quantile, its function is written as:
 $$
-M_n(x) = \sum_{i=1}^{n} W_n (X_i) Y_i  \tag{1}
-$$$W_n(x)$ *is the sum of weights that belongs to all real numbers.
-Weights are positive numbers and small if* $X_i$ *is far from* $x$*.*
-
-*Another equation:*
-
+Q(\tau) = F^{-1}(\tau) = inf\{x:F(x) \ge \tau\}, \text{  }0 < \tau < 1
 $$
-y_i = \beta_0 + \beta_1 X_1 +\varepsilon_i
+Here we will use linear equation to illustrate the optimization behind the quantile regression. While OLS aims to find the average response values. Since the quantile function models a specific $\tau^{th}$ percentile of the target variable, the linear quantile function at $\tau^{th}$ can be written as:
+$$
+Q(\tau) = y_i= \alpha_{\tau} + \beta_{\tau} \times X_i + \epsilon_{\tau}
+$$
+where $i = 1, 2, 3, ..., n$ for n sample size. From here, we can get the loss function as $\rho_{\tau}$:
+$$
+\epsilon_\tau = y_i - Q(\tau) =  y_i - \alpha_\tau + \beta_\tau \times X_i
+$$
+Since $\epsilon_\tau = y_i - Q(\tau)$, and \tau is the percentile, then
+$$
+P(\epsilon(\tau) < 0) = P(y_i - Q(\tau) < 0) = P(y_i < Q(\tau)) = \tau
 $$
 
-## Analysis and Results
+From here, in simple case, the $\tau^{th}$ percentile can replace the CDF of the function. Then the error is minimize by putting weights on negative and positive values based on the percentile $\tau^{th}$:
+$$
+\epsilon_\tau = min(\tau \times \sum_{y_i > Q(\tau)} |y_i - Q(\tau)| + (1 - \tau) \times \sum_{y_1 < Q(\tau)} |y_i - Q(\tau) |) \\
+= min(\sum \rho_\tau(y_i - Q(\tau)))
+$$
 
-### Data Exploration and Visualization
+### 2.2 Perfromance Metrics
 
--   Describe your data sources and collection process.
+Since the goal is to compare the performance between OLS and QR, we need certain statistical metrics. In the simulation, designed by [@simulation], since we apply Monte Carlo method and have different loss functions between OLS and QR, I will apply the standard Monte Carlo estimator of empirical statistical power, i.e. power percentage, and coverage probability, i.e. coverage percentage at the conventional level $\alpha = 0.05$ [@muthen2002use]. The power percentage is defined by the proportion of simulations (replications) where the null hypothesis, the slope of the regression is non-significant, is rejected. Coverage percentage is the proportion of the simulations (replications) that the true slope falls inside the 95% confidence interval. The power percentage and coverage percentage are calculated by:
+$$
+Power = \sum_{1}^{simulations} I(p\_value < 0.05), \text{ for } I(p\_value) =
+\begin{cases}
+1 & \text{if } p\_value < 0.05 \\
+0 & \text{otherwise}
+\end{cases}
+$$
+$$
+Coverage = \sum_{1}^{simulations} I(LB_{95} < slope < UP_{95})
+$$
+Another performance metric, also introduced in [@muthen2002use] is the empirical Type I error rate. It is defined exactly as the Power Percentage but based on the true slope is 0. Thus, when the simulation function has no slope, Type I error computes the proportion of models returning non-zero slope.
+$$
+\text{Type I error} = \frac{1}{Simulations}\sum_{1}^{simulations} I(p_value < 0.05)
+$$
 
--   Present initial findings and insights through visualizations.
+Different from the simulation, I will compare the performance between OLS and QR based on the coverage of their prediction intervals. Particularly, 70% of the data in the middle should fall in the 70% prediction interval of OLS and between predicted $15^{th}$ and $85^{th}$ percentile of the QR models.
 
--   Highlight unexpected patterns or anomalies.
+## 3. Simulation
 
-A study was conducted to determine how...
+This section is to provide a comprehensive comparison between OLS and QR on simple linear equation. This study employs a Monte Carlo simulation [@Montecarlomath2019] to compare the finite-sample performance of OLS and QR when errors deviate from normality. The key design steps are: Key design steps are identify the goal, e.g. to compare OLS and QR, specify the model, e.g. the linear function, decide the varying factors, e.g. sample sizes and the non-normal error terms, pick the number of replication, which is also often called simulations, and choose the performance criteria [@Burton2006]. 
 
-```{r, warning=FALSE, echo=T, message=FALSE}
-# loading packages 
-library(tidyverse)
-library(knitr)
-library(ggthemes)
-library(ggrepel)
-library(dslabs)
+Here we create the synthesized data set based on the violation of the error, i.e., residual, distribution in linear regression. The two scenario of violation are replicate of [@simulation] with the performance metrics explained in section 2.2. The first scenario removes the normality of the residuals by adding skewness while keeping the mean and variance constant. The second scenario adds heteroscedasticity in the error which also create the heteroscedasticity in the linear function while keeping the mean of error at 0.
+
+Both of the simulation cases are represented in [@simulation], where the target variable is 
+$$
+y_i = 20 + 0.6\times x_i + \epsilon_i \sim N(0, 1.9)
+$$
+
+As a result, [@simulation], Power Rate and Coverage Rate in QR surpass those in OLS once the skewness exceeds 2. Also, type I error of OLS when the sample is small, i.e. 20, fall below the 95% confidence interval of Type I error. Picking up from here paper, I will pick up the skewness from 1.5 to 8. 
+
+Since linear regression assumes normality of the error distribution, the simulation provides non-normal error distribution by adding skewness to the error distribution while keeping the variance as constant. The second case provides a comparison of two models when the variance in the error distribution increases as $x_i$ increases. The simulation will be conducted on different sizes, $n = 50, 100, 200, 450, 700$. The coverage percentage, power percentage, mean absolute error, and standard error are used as evaluating criteria.
+
+As the sample size increases, we expect the standard error of the estimate, e.g. slope, decreases. Additionally, for each data set, we apply bootstrapping method to re-sample each data set to build the confidence intervals of the slope. In our simulation, we set re-sampling at 199.
+
+## 3.1 Skewed residual distribution
+
+In this scenario, the skewness in the error distribution is created by the Gamma distribution [@simulation] since it provides simple establishment of skewness. There are five levels of skewness in this case, $s = 0, 2.5, 3, 4, 4.5, 5$. The mean and standard deviation remain constant. Error distribution if the probability density function (PDF) of Gamma distribution:
+$$
+f(x_i) = \frac{x_i^{\alpha - 1} e^{-x_i/\beta}}{\Gamma(\alpha)\,\beta^{\alpha}}, \quad \text{where } \Gamma(\alpha) = \int_0^\infty x^{\alpha -1} e^{-x} \, dx
+$$
+With $\alpha$ is the shape parameter and $\beta$ is the scale parameter, we have the mean, standard deviation, and skewness of the error distribution as follows:
+$$
+\begin{aligned}
+STD &= \sqrt(shape) \times rate = \sqrt(\alpha) \times \beta \\
+Skewness &= \frac{2}{\sqrt(shape)} = \frac{2}{\sqrt(\alpha)} \\
+E(\epsilon) &= shape \times rate = \alpha \times \beta
+\end{aligned}
+$$
+
+First, we pick the $E(\epsilon) = 0$ and $STD = 1.9$ for the error distribution. Next, we use the predefined skewness, $s = 0, 1, 2, 3, 6$, to calculate the shape parameter, then use the standard deviation function to calculate the rate parameter. Since the mean values of the error will be shifted from 0, we subtract the error values that are generated by the Gamma distribution from the $shape \times rate$. We will compare OLS vs. QR at $\tau = 0.5$, i.e. median regression, in this case since mean and variance of error are kept constant.
+
+```{r}
+library(patchwork)
+#| fig-cap: "Distribution of Slope Estimates between OLS and QR(r = 0.5) at different skewness levels"
+#| label: fig-slope_skew
+slope_skew <- readRDS("slope_skew.rds")
+slope_skew
 ```
 
-```{python}
-import pandas as pd
+The slope distribution is separated by the skewness levels, shown in @fig-slope_skew. Based on the slope distributions, the slope range deceases as the sample size increases. Although OLS shows consistent spread of the slope estimates in all levels of skewness, the spread of slope in median regression decline dramatically as the skewness increases. The slope distributions from the median regression have very small range compare to OLS. As skewness exceeds 3, the almost all of the slope estimates in median regression fall within the 95% confidence interval of the true slope, i.e. 0.6, seen in @fig-skew-qr.
+
+```{r}
+#| fig-cap: "Distribution of Power Percentage between OLS and QR (r = 0.5) at different skewness levels"
+#| label: fig-power_skew
+power_skew <- readRDS("power_skew.rds")
+power_skew
+```
+The power percentage, @fig-power_skew, of both models accelerate to 100% starting from sample size 200. While the power percentage in median regression shifts from below 95% when skewness $\le 2.5$, it reaches approximately 100% in other skewness regardless of sample size. Type I errors @fig-type1-qr of OLS are stable an within the empirical 95% for 5% of false positive cases. However, QR at median has increasing type I error rate as the sample size increases and is conservative for smaller sample sizes.
+
+```{r}
+#| fig-cap: "Type I Error between OLS and QR(r = 0.5) at different skewness levels"
+#| label: fig-type1-qr
+type1_qr <- readRDS("typei_2models_skew.rds")
+type1_qr
+```
+For high skewness levels, the proportion of rejecting an insignificant slope increases as the sample size increases. Based on the high power percentage and low type I error, the median regression seems to perform better than the OLS.
+```{r}
+#| fig-cap: "Coverage Percentage between OLS and QR(r = 0.5) at different skewness levels"
+#| label: fig-cover_skew
+cover_skew <- readRDS("coverage_skew.rds")
+cover_skew
 ```
 
-```{r, warning=FALSE, echo=TRUE}
-# Load Data
-kable(head(murders))
+The coverage percentage of median regression eventually surpass those in the linear regression as sample size increases and the skewness increases. Coverage percentage by OLS and median regression are always within the 95% confidence interval of the 95% coverage, except when skewness = 4, 4.5, 5. At these skewness levels, the coverage percentage by the QR is above the confidence interval for all sample sizes.
 
-ggplot1 = murders %>% ggplot(mapping = aes(x=population/10^6, y=total)) 
+### 3.2 Residual Heteroskedastic Variance
 
-  ggplot1 + geom_point(aes(col=region), size = 4) +
-  geom_text_repel(aes(label=abb)) +
-  scale_x_log10() +
-  scale_y_log10() +
-  geom_smooth(formula = "y~x", method=lm,se = F)+
-  xlab("Populations in millions (log10 scale)") + 
-  ylab("Total number of murders (log10 scale)") +
-  ggtitle("US Gun Murders in 2010") +
-  scale_color_discrete(name = "Region")+
-      theme_bw()
-  
+The second scenario is to fit OLS and QR when the variance of the error increases as the $x_i$ increases. As before, the mean of error is kept at 0. The error distribution' variance is as follows:
+$$
+\epsilon(x_i) = N(0, \sigma^2) \times (1 + x_i \times \frac{1}{7})
+$$
+When the residual distribution is random, it follows a normal distribution, thus the regression line at different quantiles should not after greatly (except for smaller sample size). However, once the heteroscedasticity exists, the slopes at different quantiles, especially at the lower and upper ends, will alter from the middle. The @fig-homo-heter below shows how slope of regression line increases as the the quantile increases.
 
+```{r eval = T, warning = F, message = F}
+#| fig-cap: "The change in slopes at different quantile between homoscedastic and heteroscedastic response"
+#| label: fig-homo-heter
+homo_var <- readRDS("homo_var.rds")
+heter_var <- readRDS("heter_var.rds")
+typei_2models_norm <- readRDS("typei_2models_norm.rds")
+p <- homo_var | heter_var
+p
+# typei_2models_norm
 ```
 
-### Modeling and Results
+Here, multiple percentile $\tau^{th} = 25, 50, 75, 90$ will be modeled, and the comparative statistics will be extracted to compare the reliability of the regression. Based on the output, quantile regression at different levels has substantially higher coverage percentage in general. However, OLS exhibits better convergence for the power percentage when the sample size is smaller. When the sample size surpass 400, the power percentage of quantile regression is either higher or very close to the corresponding one of OLS. When fitting quantile regression at the median, the standard error is lower, coverage percentage and power percentage are higher than those in OLS. This suggest that for non-homogeneity variance, median regression exhibits more robust fitting compared to OLS at certain level of heteroskedasticity.
 
--   Explain your data preprocessing and cleaning steps.
+```{r}
+slope_all_heters <- readRDS("slope_all_heter.rds")
+ols_slope_heters <- readRDS("OLS_heters.rds")
+qr25_slope_heters <- readRDS("QR_0.25_heters.rds")
+qr50_slope_heters <- readRDS("QR_0.5_heters.rds")
+qr75_slope_heters <- readRDS("QR_0.75_heters.rds")
+qr90_slope_heters <- readRDS("QR_0.9_heters.rds")
 
--   Present your key findings in a clear and concise manner.
+slope_all_heters | ols_slope_heters | qr25_slope_heters 
+qr50_slope_heters | qr75_slope_heters | qr90_slope_heters
+```
+Based on the estimated slope plots, the estimated range of slope in all models decrease as the sample size increases with the highest in QR at $\tau^{th} = 0.9$. When the from sample size 200, all models except QR at $\tau^{th} = 0.25$ have the estimated slope within the 95% CI level and the interval the middle 50% quartile at sample size 800 declines by more than half of the interval at size 50.
 
--   Use visuals to support your claims.
+```{r}
+readRDS("Bias_all_heter.rds")
+```
+The bias of the models converges to 0 with increasing sample size with QR at $\tau^{th} = 0.9$ having the most dispersion and OLS having the least dispersion.
 
--   **Tell a story about what the data reveals.**
+```{r}
+#| fig-cap: "Power and Coverage Percentage between OLS and QRs on heteroscedastic response"
+#| label: fig-power-cover-heter
+power_heter <- readRDS("power_heter.rds")
+cover_heter <- readRDS("cover_heter.rds")
+power_heter | cover_heter
+```
+
+Even though the power percentage converses to 100% as sample size increases, the coverage percentage fluctuates by different quantiles. OLS is the only model that has the monotonic converage percentage.
+
+```{r}
+#| fig-cap: "Type I Error between OLS and QRs on heteroscedastic response"
+#| label: fig-typei-heter
+typei_2models_he <- readRDS("typei_2models_he.rds")
+typei_2models_he
+```
+
+## 4. Real life application
+### 4.1 STROKE Prevalence
+#### 4.1.1 Data exploration
+
+This study uses county-level data, i.e., each observation is a county, from the contiguous United States for the year 2022. The outcome variable in this study is the crude prevalence of stroke (STROKE), measured as the percentage of adults in a county who have ever been told by a healthcare professional that they had a stroke. This variable is derived from model-based small-area estimates and is expected to be skewed in real-world county-level data. This means that some counties tend to have relatively low stroke prevalence, while a smaller number of counties—often those with higher concentrations of risk factors—exhibit substantially elevated rates. Because of this skewness and the presence of potential outliers, ordinary least squares (OLS) regression, which focuses on the conditional mean, may be sensitive to extreme values. Therefore, we compare OLS estimates with quantile regression at the median (0.5), which provides a more robust estimate of the central tendency and is less influenced by extreme observations.
+
+* STROKE — Crude prevalence (%) of adults who have ever been told by a doctor that they had a stroke. This measure comes from the CDC PLACES: Local Data for Better Health, County Data 2024 release, which provides model-based small-area estimates derived from the 2022 Behavioral Risk Factor Surveillance System (BRFSS). We used the crude prevalence estimates (Data_Value_Type == "Crude prevalence" and MeasureId == "STROKE").
+
+The following predictors are included in the analysis (all obtained from the 2022 County Health Rankings & Roadmaps analytic dataset):
+
+* smoke: Adult smoking prevalence (raw value) — percentage of adults who are current smokers. Smoking is a well-established major modifiable risk factor for stroke.
+* diabetes_prev: Diabetes prevalence (raw value) — percentage of adults aged 18 and older with diagnosed diabetes.
+* obesity_prev: Adult obesity prevalence (raw value) — percentage of adults with a body mass index ≥ 30 kg/m².
+* air_pollution: Average daily density of fine particulate matter (PM2.5) in µg/m³.
+* physical_inactive: Physical inactivity prevalence (raw value) — percentage of adults who reported no leisure-time physical activity.
+
+Counties with missing stroke prevalence were excluded from the analysis.
+The final dataset is cross-sectional and ecological in nature (county-level aggregates). The variables for the dataset are joined by the countyID. Since Stroke prevalence is right-skewed, with most counties showing relatively low prevalence but a smaller number of counties exhibiting substantially higher rates. This skewness motivated the comparison between ordinary least squares (OLS) regression and quantile regression.
+
+After merging the CDC PLACES stroke data with the County Health Rankings analytic file and county boundary information, several data cleaning steps were performed. All key variables were converted to numeric format to ensure compatibility with regression modeling. Rows containing missing values were removed, and the spatial geometry column was dropped to simplify this regression analysis. The final analytic sample consisted of 3,107 counties with complete information on stroke prevalence and all predictors. There were no remaining missing values in the outcome variable (STROKE) or the primary predictors after cleaning.
+
+To examine the bivariate relationships among variables, a correlation matrix was computed. As anticipated, stroke prevalence showed moderate to strong positive correlations with adult smoking, diabetes prevalence, and physical inactivity. The correlation matrix below with high correlation value between physical_inactive vs. obesity_prev and physical_inactive vs. diabetes_prev shows potential multicollinearity prior to regression modeling. These steps ensured that the dataset was properly prepared for subsequent ordinary least squares (OLS) and quantile regression analyses.
+
+Next, we plot the histogram of STROKE @fig-hist-stroke to see the behavior of the distribution. With longer right tailed, STROKE is positive skewed by 0.6 unit. Since positive skewness violates the requirement of OLS, we can still fit STROKE by OLS and Median regression to compare the robustness. Though there is skewness, STROKE still has a bell shape very close to normal distribution. Thus, in this analysis, we expect the skewness can be remained in the residuals of OLS with small value of skew, thus there is a high chance that we will have similar results between fitting OLS and median regression as in the simulation's results.
+
+```{r eval = T, warning = F, message = F}
+#| fig-cap: "Histogram of Stroke Prevalence"
+#| label: fig-hist-stroke
+#| echo: FALSE
+hist.stroke <- readRDS("hist.stroke.rds")
+hist.stroke
+```
+
+Next step is to identify significant predictors. Based on @fig-corr-stroke, stroke prevalence has weak linear correlation to obesity prevalence, so this predictor will be removed. There is high correlation between physical inactivity prevalence and diabete prevalence at 0.79. To ensure no multicollinearity between them, predictor with variance inflation factor greater than 5 will be removed if the coefficient of the remaining predictors alter greatly with and without it in the model.
+
+```{r}
+#| fig-cap: "Correlation Matrix of Stroke data set"
+#| label: fig-corr-stroke
+cor.stroke <- readRDS("cor.stroke.rds")
+cor.stroke
+```
+
+
+Since we suspect there is at least one multicollinearity, we perform vif test on several models, with and without physical_inactive or diabetes_prev. For the full model, vif(physical_inactive) surpasses 5, the recommend threhold to detect multicollinearity. The second model vif of all variables improves once physical_inactive is removed. The third model with diabetes_prev removed does not show much vif improvement even though multicollinearity is removed. Therefore, model two will be used to fit OLS and median regression.
+
+#### 4.1.2 Data Modeling
+
+With same linear formula, the results of fitting OLS and median regression are as follows. Both of models illustrate that obesity is not an influence on STROKE prevalence. Adult smoking prevalence and diabetes prevalence show strong positive associations with stroke rates, while air pollution exhibit a significant negative association. The coefficients between two models are very similar, for example, smoking prevalence is OLS: 10.91 and QR: 11.02, and diabetes prevalence is  QR: 13.51 and OLS: 14.40 in OLS, suggesting that its effect on the typical county is somewhat weaker than its influence on the mean. The intercept was also slightly lower in the median regression (1.01 vs. 1.10), which is expected given the right-skewed distribution of stroke prevalence. These findings suggest that while OLS provides a good overall fit, quantile regression at the median offers more robust estimates in the presence of right-skewed outcome variable.
+
+With the OLS function as reference, the skewness of the error terms is calculated at 0.55, which is a very small number. Therefore, we expect the OLS and QR to have similar statistics such as the coefficients of the predictors. However, the prediction intervals may tell a different story.
+
+```{r}
+#| fig-cap: "OLS vs. QR on Stroke Prevalence by Diabete Prevalence"
+#| label: fig-plot.dist
+plot.dist <- readRDS("plot.dist.rds")
+plot.dist
+```
+
+
+```{r}
+#| tbl-cap: "Prediction Interval between OLS and QRs on Stroke Prevalence"
+#| label: tab-typei-heter
+pre.interval.stroket <- readRDS("pre.interval.stroket.rds")
+pre.interval.stroket
+```
+
+
+Coefficient Heterogeneity Plot
+
+```{r}
+#| fig-cap: "Slope Estimates between OLS vs. QR on Different Quantile Levels"
+#| label: fig-coef.stroke
+coef.stroke <- readRDS("coef.stroke.rds")
+coef.stroke
+```
+
+
+Since we have confirm that median regression provides close fit as OLS. In this section, we will check for coefficient homogeneity across the SMOKE prevalence. The figures below visualize how the estimated effects of each predictor vary across the distribution of stroke rates, $\tau^{th} = 0.25, 0.50, 0.75, 0.90$, compared to the single OLS estimate (horizontal dashed lines). This plot directly illustrates the heterogeneity that OLS misses due to the right-skewed nature of stroke prevalence 
+
+Diabetes_prev shows the clearest heterogeneity. The effect strengthens dramatically as we move to higher quantiles: from approximately 10.5 percentage points at the 25th percentile to over 21 percentage points at the 90th percentile. Since the OLS coefficient estimate (≈ 14.4) lies in the middle constantly, it understates the increasing impact in high-stroke counties and overstates it in low-stroke counties. This suggests diabetes is a particularly strong driver in counties that already have elevated stroke rates.
+
+Smoke exhibits the opposite pattern. The effect is strongest at lower quantiles (≈ 11.6 at 0.25) and weakens substantially at higher quantiles (dropping to ≈ 9.5 at 0.90). The OLS estimate (≈ 10.9) again represents an average effect, not the actually changing trend of smoke.
+
+Air_pollution displays least heterogeneity, although QR still shows more fluctuate effect of air_pollution on STROKE while OLS displays unchangable influence. The negative association becomes stronger from 0.25 (≈ –0.07) to 0.75 (≈ –0.115), then slightly weakens at 0.90.
+
+Because stroke prevalence is right-skewed, OLS provides a single “average” effect that is pulled by extreme high-stroke counties. Meanwhile, quantile regression reveals the actually heterogeneity: diabetes has a much larger impact in the upper tail (where stroke rates are already high), while smoking has a relatively larger effect among lower-stroke counties. These patterns would be completely invisible using OLS alone.
+
+
+
+### Conclusion
+
+This report has demonstrated both the theoretical foundations and practical advantages of quantile regression as a robust and flexible alternative to ordinary least squares (OLS) regression. Unlike OLS, which estimates only the conditional mean and can be heavily influenced by skewness, or heteroscedasticity, quantile regression provides a complete picture of how predictors affect different parts of the outcome distribution. Through simulations with skewed and heteroscedastic errors, we showed that quantile regression maintains reliable performance where OLS assumptions are violated to certain levels of skewness and heteroscedasticity. With reference to the original paper by [@simulation], both simulations show that median regression produces lower mean absolute error (MAE) as skewness surpasses 2.5 consistently across sample sizes. Regardless of skewness, OLS displays consistent mean absolute error percentage. For two cases of simulation (this project and the original paper), we are hinted that as the skewness exceeds 2, quantile regression exhibits a more robust convergence to the true slope compared to OLS. 
+
+In the real-world application to 2022 U.S. county-level stroke prevalence data, the comparison between OLS and quantile regression (at the median and across multiple τ values) revealed meaningful heterogeneity that would have been missed by OLS alone: diabetes prevalence had a substantially stronger effect in high-stroke counties, while smoking showed the opposite pattern. The slightly lower mean absolute error (MAE) of the median quantile regression further confirmed its robustness for typical observations in right-skewed health data.
+
+These findings underscore the value of quantile regression in public health research, where understanding effects at the tails of the distribution (e.g., high-risk population) is often more policy-relevant than the average effect. While the analysis is limited to face value of the data and does not establish causality, it illustrates how quantile regression can uncover nuanced relationships and guard against misleading conclusions drawn from mean-based models.
+
+In summary, quantile regression is not merely an extension of OLS but a powerful tool that better reflects real-world data complexities. Future work could extend these methods to longitudinal or spatial models. By moving beyond the mean, researchers can gain deeper, more actionable insights into the drivers of health outcomes.
 
 ```{r}
 
 ```
-
-### Conclusion
-
--   Summarize your key findings.
-
--   Discuss the implications of your results.
 
 ## References

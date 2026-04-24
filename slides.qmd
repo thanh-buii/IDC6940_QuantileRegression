@@ -1,7 +1,7 @@
 ---
-title: "Present a great story for data science projects"
-subtitle: "This is a Slide Template"
-author: "Students names (Advisor: Dr. Cohen)"
+title: "Quantile Regression in Practice: Simulation and an Application to Stroke Prevalence"
+subtitle: "IDC6940 Capstone"
+author: "Ngoc Bui (Advisor: Dr. Cohen)"
 date: '`r Sys.Date()`'
 format:
   revealjs
@@ -17,101 +17,206 @@ editor:
     wrap: 72
 ---
 
-::: callout-important
-**Remember:** Your goal is to make your audience understand and care
-about your findings. By crafting a compelling story, you can effectively
-communicate the value of your data science project.
+## Introduction {style="font-size: 0.6em"}
 
-Carefully read this template since it has instructions and tips to
-writing!
+- This is a comparison study between Original Least Squares (OLS) vs. Quantile Regression (QR) [@koenker2005].
+- Though usually we want to know the average outcome of the target variable, we are more interested in the behavior of the lower 40% or upper 20% of it. 
+- For example, researchers would be more interested in the lower percentile of children's stunting distribution to assess the malnutrition situation [@Ashortstoryonhowandwhy].
 
-More information about `revealjs`:
-<https://quarto.org/docs/reference/formats/presentations/revealjs.html>
-:::
+**How do QR and OLS compare in terms of statistical power, empirical coverage rate, and prediction interval coverage when the target variable is not normal?**
 
-## Introduction  {.smaller}
+- Regression models:
+  - OLS: $OLS = \alpha + \beta \times X_i^T + \epsilon$
+  - QR: $Q(\tau) = \alpha_{\tau} + \beta_{\tau} \times X_i^T + \epsilon_{\tau}$
+- In QR, different percentiles have different intercepts, slopes, and errors.
+- Loss functions:
+  - OLS: $\epsilon = min(\sum (y_i - \beta x_i^T)^2)$
+  - QR: $\epsilon_\tau = min(\tau \times \sum_{y_i > Q(\tau)} |y_i - Q(\tau)| + (1 - \tau) \times \sum_{y_1 < Q(\tau)} |y_i - Q(\tau) |)$
 
--   Develop a storyline that captures attention and maintains interest.
-
--   Your audience is your peers
-
--   Clearly state the problem or question you're addressing.
-
--   Introduce why it is relevant needs.
-
--   Provide an overview of your approach.
-
-In kernel estimator, weight function is known as kernel function
-[@efr2008]. Cite this paper [@bro2014principal]. The GEE [@wang2014].
-The PCA [@daffertshofer2004pca]\*
-
-## Methods
-
--   Detail the models or algorithms used.
-
--   Justify your choices based on the problem and data.
+# Simulation
+## Simulation {.smaller}
+- The simulation is a replicate of [@simulation].
+    - First case: Skewed residual distribution.
+    - Second case: Residual Heteroskedastic Variance.
+- For every predictor x is uniformly generated from 0 to 5, its response y is $y_i = 20 + 0.6\times x_i + \epsilon_i \sim N(0, 1.9)$
+- The non-normal behaviors are added in the residual distribution, which directly create non-normal data.
+- This study employs a Monte Carlo simulation [@Montecarlomath2019] to simulate 1000 replications/modeling counts of OLS vs. QR on a linear model.
+- Sample size = 50, 100, 200, 450, 700.
 
 
+## Comparing Metrics {style="font-size: 0.6em"}
+- The power percentage is defined by the proportion of replications where the null hypothesis, the slope of the regression is non-significant, is rejected [@muthen2002use].
+$$
+\begin{aligned}
+Power &= \sum_{1}^{replications} I(p\_value < 0.05), \text{ for } I(p\_value) \\
+&=
+\begin{cases}
+1 & \text{if } p\_value < 0.05 \\
+0 & \text{otherwise}
+\end{cases}
+\end{aligned}
+$$
 
-## Data Exploration and Visualization
 
--   Describe your data sources and collection process.
+- Coverage percentage is the proportion of the replications that the true slope falls inside the 95% confidence interval [@muthen2002use].
+$$
+Coverage = \sum_{1}^{replications} I(LB_{95} < slope < UP_{95})
+$$
 
--   Present initial findings and insights through visualizations.
+- Type I Error Rate is defined exactly as the Power Percentage but based on the true slope is 0 [@muthen2002use].
+$$
+\text{Type I error} = \sum_{1}^{replications} I(p\_value < 0.05)
+$$
 
--   Highlight unexpected patterns or anomalies.
 
-## Data Exploration and Visualization {.smaller}
+## Skewed residual distribution {.smaller}
+- Main comparison: OLS vs. QR at median.
+- Residuals have different levels of skewness while maintaining the $\mu$ at 0 and $\sigma$ at 1.9.
+- Skewness levels: 0, 2.5, 3, 4, 4.5, 5.
+- To creat skewness in the residuals, Gamma distribution is applied since it has simple code in R while adding the skewness.
+$$
+f(x_i) = \frac{x_i^{\alpha - 1} e^{-x_i/\beta}}{\Gamma(\alpha)\,\beta^{\alpha}}, \quad \text{where } \Gamma(\alpha) = \int_0^\infty x^{\alpha -1} e^{-x} \, dx
+$$
+- To generate the skewness in R, the relationship between the skewness, standard deviation, shape and rate parameters are:
+$$
+\begin{aligned}
+Skewness &= \frac{2}{\sqrt(shape)} = \frac{2}{\sqrt(\alpha)} \\
+STD &= \sqrt(shape) \times rate = \sqrt(\alpha) \times \beta \\
+\end{aligned}
+$$
 
-A study was conducted to determine how...
+## Skewed residual distribution
 
-```{r, warning=FALSE, echo=F, message=FALSE}
-# loading packages 
-library(tidyverse)
-library(knitr)
-library(ggthemes)
-library(ggrepel)
-library(dslabs)
+```{r}
+#| fig-cap: "Distribution of Power Percentage between OLS and QR (r = 0.5) at different skewness levels"
+#| label: fig-power_skew
+power_skew <- readRDS("power_skew.rds")
+power_skew
 ```
 
-```{r, warning=FALSE, echo=F}
-# Load Data
-#kable(head(murders))
 
-ggplot1 = murders %>% ggplot(mapping = aes(x=population/10^6, y=total)) 
+## Skewed residual distribution {.smaller}
+```{r}
+#| fig-cap: "Coverage Percentage between OLS and QR(r = 0.5) at different skewness levels"
+#| label: fig-cover_skew
+cover_skew <- readRDS("coverage_skew.rds")
+cover_skew
+```
 
-  ggplot1 + geom_point(aes(col=region), size = 4) +
-  geom_text_repel(aes(label=abb)) +
-  scale_x_log10() +
-  scale_y_log10() +
-  geom_smooth(formula = "y~x", method=lm,se = F)+
-  xlab("Populations in millions (log10 scale)") + 
-  ylab("Total number of murders (log10 scale)") +
-  ggtitle("US Gun Murders in 2010") +
-  scale_color_discrete(name = "Region")+
-      theme_bw()
+
+## Skewed residual distribution {.smaller}
+```{r}
+#| fig-cap: "Type I Error between OLS and QR(r = 0.5) at different skewness levels"
+#| label: fig-type1-qr
+type1_qr <- readRDS("typei_2models_skew.rds")
+type1_qr
+```
+
+
+## Residual Heteroskedastic Variance {.smaller}
+- The heteroskedastic variance is generated by multiplying the original residuals by a linear equation: 
+$\epsilon(x_i) = N(0, 1.9) \times (1 + x_i \times \frac{1}{7})$.
+- Percentile level: $\tau^{th} = 25, 50, 75, 90$.
+
+```{r eval = T, warning = F, message = F}
+#| fig-cap: "The change in slopes at different quantile between homoscedastic and heteroscedastic response for n = 700"
+#| label: fig-homo-heter1
+
+library(patchwork)
+homo_var1 <- readRDS("homo_var.rds")
+heter_var1 <- readRDS("heter_var.rds")
+p1 <- homo_var1 | heter_var1
+p1
+```
+
+
+## Residual Heteroskedastic Variance {.smaller}
+- Percentiles: $\tau^{th} = 25, 50, 75, 90$.
+```{r}
+#| fig-cap: "Power and Coverage Percentage between OLS and QRs on heteroscedastic response"
+#| label: fig-power-cover-heter
+power_heter <- readRDS("power_heter.rds")
+cover_heter <- readRDS("cover_heter.rds")
+power_heter | cover_heter
+```
+
+
+## Residual Heteroskedastic Variance {.smaller}
+```{r}
+#| fig-cap: "Type I Error between OLS and QRs on heteroscedastic response"
+#| label: fig-typei-heter
+typei_2models_he <- readRDS("typei_2models_he.rds")
+typei_2models_he
+```
+
+# Application
+
+## Stroke Prevalence in the US (2022) {.smaller}
+**Application**: County-level stroke prevalence in the United States (2022)
+- With the increase number of stroke cases, identifying the factors affecting stroke prevalence help inform health practitioner and the community with planning and applying healthy practice.
+
+- The factors come from social practice or living environment. The data is from CDC and County Health Rankings.
+
+- The chosen predictors are:
+  - smoke: Adult smoking prevalence — percentage of adults who are current smokers.
+
+  - diabetes_prev: Diabetes prevalence — percentage of adults aged 18 and older with diagnosed diabetes.
   
+  - obesity_prev: Adult obesity prevalence — percentage of adults with a body mass index ≥ 30 kg/m².
+  
+  - air_pollution: Average daily density of fine particulate matter (PM2.5) in µg/m³.
+  
+  - physical_inactive: Physical inactivity prevalence — percentage of adults who reported no leisure-time physical activity.
 
+## 
+```{r}
+#| fig-cap: "Histogram of Stroke Prevalence (left) and Stroke Prevalence by Diabete Prevalence on OLS vs QRs (right)"
+#| label: fig-plot.dist
+plot.dist <- readRDS("plot.dist.rds")
+hist.stroke <- readRDS("hist.stroke.rds")
+p2 <- hist.stroke | plot.dist
+p2
 ```
 
-## Modeling and Results
+## Results {.smaller}
+- OLS: STROKE ~ 0.58352 + 10.68295(smoke) + 11.50501(diabetes_prev) + 0.85461(physical_inactive)
+- QR(median): STROKE ~ 0.47272 + 10.78209(smoke) + 9.00408(diabetes_prev) + 1.82025(physical_inactive)
+```{r}
+#| fig-cap: "Slope Estimates between OLS vs. QR on Different Quantile Levels"
+#| label: fig-coef.stroke
+coef.stroke <- readRDS("coef.stroke.rds")
+coef.stroke
+```
 
--   Explain your data preprocessing and cleaning steps.
+## Comparing Prediction Intervals
+- Prediction interval is explained in [@heskes1996practical].
+- The n confidence interval is the interval that can capture n% of real observations.
+- 70% of the data in the middle should fall in the 70% prediction interval of OLS and between predicted $15^{th}$ and $85^{th}$ percentile of the QR models.
+- Prediction intervals: 50%, 70%, 80%, 90%.
 
--   Present your key findings in a clear and concise manner.
 
--   Use visuals to support your claims.
+## Comparison of Prediction Intervals {.smaller}
+- As the prediction interval increases, the OLS shows signs of over coverage, since 99.26% of the real stroke data fall in the 90% prediction interval.
+- QRs show closer fit of the number of real observations and the prediction intervals regardless.
 
--   **Tell a story about what the data reveals.**
+```{r}
+#| tbl-cap: "Prediction Interval between OLS and QRs on Stroke Prevalence"
+#| label: tab-typei-heter
+pre.interval.stroket <- readRDS("pre.interval.stroket.rds")
+pre.interval.stroket
+```
+
+
+## Conclusion
+- OLS produced one value of slope estimates regardless of the skewness and different effects of the predictors in different percentiles.
+- QR displays better coverage in different levels of prediction intervals.
+- As the prediction intervals increase, OLS overly covers the real number of observations actually in the intervals.
+- There are other predictors that can affect stroke outcomes that are not included in this study.
 
 ```{r}
 
 ```
 
-## Conclusion
-
--   Summarize your key findings.
-
--   Discuss the implications of your results.
-
 ## References
+
+

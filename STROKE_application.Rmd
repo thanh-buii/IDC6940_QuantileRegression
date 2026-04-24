@@ -1,0 +1,366 @@
+---
+title: "Untitled"
+author: "Thanh Bui"
+date: "2026-04-15"
+output: html_document
+---
+
+### Data exploration
+
+```{r eval = T, warning = F, message = F}
+library(tidyverse)
+library(tigris)
+library(broom)
+library(dplyr)
+library(car)
+library(quantreg)
+library(corrplot)
+library(ggplot2)
+```
+
+
+```{r eval = T, warning = F, message = F}
+# 1. PLACES Stroke data
+data2 <- read_csv("~/Downloads/PLACES__Local_Data_for_Better_Health,_County_Data_2024_release_20260422.csv") %>%
+  filter(MeasureId == "STROKE",
+         Data_Value_Type == "Crude prevalence",
+         Year == 2022) %>%
+  select(
+    countyID = LocationID,
+    STROKE = Data_Value,
+    state = StateAbbr,
+    county = LocationName
+  ) %>%
+  distinct() %>%
+  mutate(countyID = as.character(countyID))
+
+# 2. County Health Rankings / analytic data
+data11 <- read_csv("~/Downloads/analytic_data2022.csv") %>%
+  select(
+    countyID = `5-digit FIPS Code`,
+    obesity_prev = `Adult obesity raw value`,
+    physical_inactive = `Physical inactivity raw value`,
+    air_pollution = `Air pollution - particulate matter raw value`,
+    diabetes_prev = `Diabetes prevalence raw value`,
+    smoke = `Adult smoking raw value` 
+  ) %>%
+  mutate(countyID = as.character(countyID))
+
+# 3. County boundaries
+bound_data <- counties(cb = TRUE, year = 2022, class = "sf") %>%
+  select(countyID = GEOID) %>%
+  mutate(countyID = as.character(countyID))
+
+# 4. Final merge
+data <- bound_data %>%
+  left_join(data2, by = "countyID") %>%
+  left_join(data11, by = "countyID") %>%
+  filter(!is.na(STROKE)) %>%
+  select(countyID, state, county, STROKE, 
+         smoke, obesity_prev, physical_inactive, 
+         air_pollution, diabetes_prev, geometry)
+
+summary(data)
+colSums(is.na(data))
+```
+Drop geometry
+
+```{r}
+data <- data %>%
+  mutate(
+    countyID = as.numeric(countyID),
+    smoke = as.numeric(smoke),
+    obesity_prev = as.numeric(obesity_prev),
+    physical_inactive = as.numeric(physical_inactive),
+    air_pollution = as.numeric(air_pollution),
+    diabetes_prev = as.numeric(diabetes_prev)
+  ) %>% st_drop_geometry() %>%
+  na.omit()
+nrow(data)
+sum(is.na(data$STROKE)) 
+sum(is.na(data$smoke))
+moments::skewness(data$STROKE) 
+```
+
+```{r eval = T, warning = F, message = F}
+hist.stroke <- ggplot(data, aes(x = STROKE)) +
+  geom_histogram(binwidth = 0.5,    # adjust this as needed
+                 fill = "#FFF9C4", 
+                 color = "black") +
+  labs(title = "Histogram of Stroke Prevalence",
+       subtitle = "Skewness = 0.6",
+       x = "Stroke Prevalence",
+       y = "Frequency") +
+  theme_minimal()
+hist.stroke
+saveRDS(hist.stroke, "hist.stroke.rds")
+```
+
+```{r}
+library(ggcorrplot)
+cor_matrix <- cor(data %>% select(STROKE, smoke, obesity_prev, physical_inactive, 
+                    air_pollution, diabetes_prev), use = "complete.obs", method = "pearson")
+cor.stroke <- ggcorrplot(cor_matrix, method = "circle", type = "upper", lab = TRUE, lab_size = 2.5, 
+                         colors = c("blue", "white", "red"), title = "Correlation Matrix", ggtheme= theme_minimal())
+
+cor.stroke
+saveRDS(cor.stroke, "cor.stroke.rds")
+```
+
+Next, we plot the histogram of STROKE to see the behavior of the distribution. With longer right tailed, STROKE is positive skewed. Since positive skewness violates the requirement of OLS, we will still fit STROKE by OLS and Median regression to compare the robustness. Though there is skewness, STROKE still has a bell shape very close to normal distribution. Thus, in this analysis, we expect to have similar results between fitting OLS and median regression.
+
+Since we suspect there is at least one multicollinearity, we perform vif test on several models, with and without physical_inactive or diabetes_prev. For the full model, vif(physical_inactive) surpasses 5, the recommend threhold to detect multicollinearity. The second model vif of all variables improves once physical_inactive is removed. The third model with diabetes_prev removed does not show much vif improvement even though multicollinearity is removed. Therefore, model two will be used to fit OLS and median regression.
+```{r}
+model_vif <- lm(STROKE ~ smoke + diabetes_prev + obesity_prev + physical_inactive, data = data)
+summary(model_vif)
+vif(model_vif)
+```
+
+
+```{r}
+model_vif <- lm(STROKE ~ smoke + diabetes_prev + physical_inactive, data = data)
+vif(model_vif)
+summary(model_vif)
+```
+
+```{r}
+plot.dist <- ggplot(data, aes(x = diabetes_prev, y = STROKE)) +
+  geom_point(alpha = 0.4, col = "gray50") +
+  geom_smooth(method = "lm", se = FALSE, aes(color = "OLS")) +
+  geom_quantile(quantiles = c(0.25, 0.5, 0.75, 0.9), aes(color = factor(..quantile..))) +
+  scale_color_manual(
+    name = "Line Type",
+    values = c(
+      "OLS" = "red",
+      "0.25" = "#1f77b4",
+      "0.5"  = "#2ca02c",
+      "0.75" = "#ff7f0e",
+      "0.9"  = "#9467bd"
+    ),
+    labels = c(
+      "OLS" = "OLS",
+      "0.25" = "25th Percentile",
+      "0.5"  = "Median",
+      "0.75" = "75th Percentile",
+      "0.9"  = "90th Percentile"
+    )
+  ) +
+  labs(title = "Distribution at multiple qunatiles vs. OLS",
+       x = "X", y = "Y") +
+  theme_minimal()
+
+
+plot.dist
+saveRDS(plot.dist, "plot.dist.rds")
+
+```
+
+### Data Modeling
+
+With same linear formula, the results of fitting OLS and median regression are as follows. Both of models illustrate that obesity is uninfluential on STROKE prevalence. Adult smoking prevalence and diabetes prevalence show strong positive associations with stroke rates, while air pollution exhibit a significant negative association. The coefficients between two models are very similar, for example, smoking prevalence is OLS: 10.91 and QR: 11.02, and diabetes prevalence is  QR: 13.51 and OLS: 14.40 in OLS, suggesting that its effect on the typical county is somewhat weaker than its influence on the mean. The intercept was also slightly lower in the median regression (1.01 vs. 1.10), which is expected given the right-skewed distribution of stroke prevalence. These findings suggest that while OLS provides a good overall fit, quantile regression at the median offers more robust estimates in the presence of right-skewed outcome variable.
+
+```{r}
+ols_model <- lm(STROKE ~ smoke + diabetes_prev + physical_inactive, 
+                data = data)
+
+qr_median <- rq(STROKE ~ smoke + diabetes_prev + physical_inactive, 
+                tau = 0.5, data = data)
+
+summary(ols_model)
+
+summary(residuals(qr_median))
+summary(qr_median, se = "boot")
+```
+
+This table shows a row by row coefficient values of two models.
+
+```{r}
+# ols_coefs <- tidy(ols_model) %>%
+#   mutate(Model = "OLS", 
+#          estimate = round(estimate, 4),
+#          std.error = round(std.error, 4))
+# 
+# qr_coefs <- tidy(qr_median) %>%
+#   mutate(Model = "QR Median", 
+#          estimate = round(estimate, 4),
+#          std.error = round(std.error, 4))
+# 
+# comparison <- bind_rows(ols_coefs, qr_coefs) %>%
+#   select(term, Model, estimate, std.error, p.value = p.value) %>%
+#   arrange(term, Model)
+# 
+# print(comparison)
+```
+Model performance is evaluated using MAE and RMSE. The quantile regression at the median shows a slightly lower MAE (0.4761) than OLS (0.4780), suggesting marginally better prediction for typical observations (US counties). These results confirm that although both models yield similar conclusions, quantile regression at the median is more robust to the right-skewed nature of stroke prevalence. Although RMSE of OLS is lower than median regression, it should only be meaningful if the outcome variable has normal distribution.
+
+
+### Coefficient Heterogeneity Plot
+
+Since we have confirm that median regression provides close fit as OLS. In this section, we will check for coefficient homogeneity across the SMOKE prevalence. The figures below visualize how the estimated effects of each predictor vary across the distribution of stroke rates, $\tau^{th} = 0.25, 0.50, 0.75, 0.90$, compared to the single OLS estimate (horizontal dashed lines). This plot directly illustrates the heterogeneity that OLS misses due to the right-skewed nature of stroke prevalence 
+
+Diabetes_prev shows the clearest heterogeneity. The effect strengthens dramatically as we move to higher quantiles: from approximately 10.5 percentage points at the 25th percentile to over 21 percentage points at the 90th percentile. Since the OLS coefficient estimate (≈ 14.4) lies in the middle constantly, it understates the increasing impact in high-stroke counties and overstates it in low-stroke counties. This suggests diabetes is a particularly strong driver in counties that already have elevated stroke rates.
+
+Smoke exhibits the opposite pattern. The effect is strongest at lower quantiles (≈ 11.6 at 0.25) and weakens substantially at higher quantiles (dropping to ≈ 9.5 at 0.90). The OLS estimate (≈ 10.9) again represents an average effect, not the actually changing trend of smoke
+
+Air_pollution displays least heterogeneity, although QR still shows more fluctuate effect of air_pollution on STROKE while OLS displays unchangable influence. The negative association becomes stronger from 0.25 (≈ –0.07) to 0.75 (≈ –0.115), then slightly weakens at 0.90.
+
+Oobesity_prev shows essentially no heterogeneity and remains near zero across all quantiles, consistent with its non-significance in both OLS and median regression.
+
+Because stroke prevalence is right-skewed, OLS provides a single “average” effect that is pulled by extreme high-stroke counties. Meanwhile, quantile regression reveals the actually heterogeneity: diabetes has a much larger impact in the upper tail (where stroke rates are already high), while smoking has a relatively larger effect among lower-stroke counties. These patterns would be completely invisible using OLS alone.
+
+```{r}
+taus <- c(0.25, 0.5, 0.75, 0.90)
+
+qr_multi <- rq(STROKE ~ smoke + diabetes_prev + physical_inactive, 
+               tau = taus, data = data)
+
+coef_table <- tidy(qr_multi, se.type = "nid") %>%
+  mutate(
+    estimate = round(estimate,  4),
+    std.error = round(std.error, 4),
+    p.value = round(p.value,   4)
+  ) %>%
+  filter(term != "(Intercept)") %>%
+  select(tau, term, estimate, std.error, p.value) %>%
+  arrange(term, tau)
+
+print(coef_table)
+```
+
+
+
+```{r}
+coef.stroke <- ggplot(coef_table, aes(x = tau, y = estimate, color = term, group = term)) +
+  geom_point(size = 3) +
+  geom_line() +
+  geom_hline(data = tidy(ols_model) %>% filter(term != "(Intercept)"),
+             aes(yintercept = estimate, color = term), linetype = "dashed") +
+  facet_wrap(~ term, scales = "free_y") +
+  labs(title = "Coefficient Heterogeneity Across Quantiles vs OLS (dashed)",
+       x = "Quantile", y = "Estimate") +
+  theme_minimal()
+
+coef.stroke
+saveRDS(coef.stroke, "coef.stroke.rds")
+```
+
+### Comparing the Prediction Interval
+
+```{r}
+# 50% middle
+qr25 <- rq(STROKE ~ smoke + diabetes_prev + physical_inactive, 
+                data = data, tau = 0.25)
+qr75 <- rq(STROKE ~ smoke + diabetes_prev + physical_inactive, 
+                data = data, tau = 0.75)
+
+# 70% middle 
+qr15 <- rq(STROKE ~ smoke + diabetes_prev + physical_inactive, 
+                data = data, tau = 0.15)
+qr85 <- rq(STROKE ~ smoke + diabetes_prev + physical_inactive, 
+                data = data, tau = 0.85)
+
+# 80% middle 
+qr10 <- rq(STROKE ~ smoke + diabetes_prev + physical_inactive, 
+                data = data, tau = 0.1)
+qr90 <- rq(STROKE ~ smoke + diabetes_prev + physical_inactive, 
+                data = data, tau = 0.9)
+
+# 90% middle
+qr05 <- rq(STROKE ~ smoke + diabetes_prev + physical_inactive, 
+                data = data, tau = 0.05)
+qr95 <- rq(STROKE ~ smoke + diabetes_prev + physical_inactive, 
+                data = data, tau = 0.95)
+```
+
+
+
+```{r}
+############# 50 middle
+pred.ols50 <- predict(ols, interval = "prediction", level = 0.5)
+# get the bound
+lower.ols5 <- pred.ols50[, "lwr"]
+upper.ols5 <- pred.ols50[, "upr"]
+# count
+within.ols.50 <- data$STROKE >= lower.ols5 & data$STROKE <= upper.ols5
+# qr
+pqr25 <- predict(qr25)
+pqr75 <- predict(qr75)
+within_qr5 <- data$STROKE >= pqr25 & data$STROKE <= pqr75
+```
+
+```{r}
+############# 70 middle
+pred.ols70 <- predict(ols, interval = "prediction", level = 0.7)
+# get the bound
+lower.ols7 <- pred.ols70[, "lwr"]
+upper.ols7 <- pred.ols70[, "upr"]
+# count
+within.ols.70 <- data$STROKE >= lower.ols7 & data$STROKE <= upper.ols7
+# qr
+pqr15 <- predict(qr15)
+pqr85 <- predict(qr85)
+within_qr7 <- data$STROKE >= pqr15 & data$STROKE <= pqr85
+```
+
+
+```{r}
+############# 80 middle
+pred.ols80 <- predict(ols, interval = "prediction", level = 0.8)
+# get the bound
+lower.ols8 <- pred.ols80[, "lwr"]
+upper.ols8 <- pred.ols80[, "upr"]
+# count
+within.ols.80 <- data$STROKE >= lower.ols8 & data$STROKE <= upper.ols8
+# qr
+pqr10 <- predict(qr10)
+pqr90 <- predict(qr90)
+within_qr8 <- data$STROKE >= pqr10 & data$STROKE <= pqr90
+```
+
+
+```{r}
+############# 90 middle
+pred.ols90 <- predict(ols, interval = "prediction", level = 0.9)
+# get the bound
+lower.ols9 <- pred.ols90[, "lwr"]
+upper.ols9 <- pred.ols90[, "upr"]
+# count
+within.ols.90 <- data$STROKE >= lower.ols9 & data$STROKE <= upper.ols9
+# qr
+pqr05 <- predict(qr05)
+pqr95 <- predict(qr95)
+within_qr9 <- data$STROKE >= pqr05 & data$STROKE <= pqr95
+```
+
+
+```{r}
+library(knitr)
+library(dplyr)
+pre.interval.stroke <- data.frame(
+  "Interval" = c("50%", "70%", "80%", "90%"),
+  OLS = round(c(sum(within.ols.50), sum(within.ols.70), sum(within.ols.80), sum(within.ols.90)) / nrow(data) * 100, 2),
+  QR = round(c(sum(within_qr5), sum(within_qr7), sum(within_qr8), sum(within_qr9))/nrow(data) * 100, 2)
+)
+
+pre.interval.stroket <- pre.interval.stroke %>%
+  kable(
+    col.names = c("Prediction Interval", "OLS", "QR"),
+    align = c("l", "c", "c"),
+    digits = 2,
+    booktabs = TRUE,
+    linesep = ""
+  )
+
+print(pre.interval.stroket)
+
+saveRDS(pre.interval.stroket, "pre.interval.stroket.rds")
+```
+
+```{r}
+
+# More information about `revealjs`:
+# <https://quarto.org/docs/reference/formats/presentations/revealjs.html>
+# :::
+
+```
+

@@ -1,0 +1,793 @@
+---
+title: "Untitled"
+format: html
+editor: visual
+---
+
+Simulate data for Linear quantile regression
+
+Heteroskedastic error with increasing variance simulation
+
+OLS
+
+```{r eval = T, warning = F, message = F}
+# Library section
+library(quantreg)
+library(ggplot2)
+library(tidyverse)
+library(sn)
+```
+
+```{r eval = T, warning = F, message = F}
+set.seed(479)
+sample_size <- c(50, 100, 200, 450, 700)
+repli <- 1000
+beta0_original <- 15
+beta1_original <- 0.4
+sigma_error <- 2.3
+mean_error <- 0
+beta_error <- 1/7
+```
+
+```{r eval = T, warning = F, message = F}
+set.seed(479)
+ols_qr_heteroscedastic <- list()
+slope_func <- function(data, indices) {
+  d <- data[indices, ]
+  fit <- lm(y ~ x, data = d)
+  coef(fit)[2]
+}
+```
+
+```{r}
+library(lmtest)
+library(sandwich)
+x <- runif(300, min = 0, max = 5)
+    y <- beta0_original + beta1_original * x + rnorm(300, mean_error, sigma_error) * (1 + x * beta_error)
+dat <- data.frame(x = x, y = y)
+
+    ols <- lm(y ~ x, data = dat)
+    
+    qr <- rq(y ~ x, tau = tau, data = dat)
+    summary(qr, se = "nid")
+```
+
+```{r}
+# Looping areaaaaaaaa
+for (i in seq_along(sample_size)) {
+  n <- sample_size[i]
+  
+  coverage <- logical(repli)
+  slope <- numeric(repli)
+  se_slope <- numeric(repli)
+  bias <- numeric(repli)
+  power <- logical(repli)
+
+  for (j in 1:repli) {
+    # data set creation
+    x <- runif(n, min = 0, max = 5)
+    y <- beta0_original + beta1_original * x + rnorm(n, mean_error, sigma_error) * (1 + x * beta_error)
+    dat <- data.frame(x = x, y = y)
+    
+    # OLS
+    ols <- lm(y ~ x, data = dat)
+    slope[j] <- coef(ols)[2]
+    se_slope[j] <- coeftest(ols)$coefficients["x", "Std. Error"]
+    
+    # Build 95% confidence interval
+    ci_lower <- slope[j] - 1.96 * se_slope[j]
+    ci_upper <- slope[j] + 1.96 * se_slope[j]
+    
+    coverage[j] <- (ci_lower <= beta1_original) && (ci_upper >= beta1_original)
+    power[j] <- (summary(ols)$coefficients["x", "Pr(>|t|)"] < 0.05)
+    bias[j] <- slope[j] - beta1_original
+  }
+  results <- tibble(
+    Run = 1:repli,
+    Sample_Size = n,
+    Model = "OLS",
+    Slope = round(slope, 4),
+    Bias = bias,
+    SE_Slope = round(se_slope, 4),
+    Coverage = coverage,
+    Power = power,
+    CI_Lower = round(slope - 1.96 * se_slope),
+    CI_Upper = round(slope + 1.96 * se_slope),
+    True_Slope = beta1_original
+  )
+  
+  ols_qr_heteroscedastic[[i]] <- results
+}
+ols_qr_heteroscedastic <- bind_rows(ols_qr_heteroscedastic)
+
+head(ols_qr_heteroscedastic, n = 3)
+```
+
+```{r eval = T, warning = F, message = F}
+set.seed(479)
+taus <- c(0.25, 0.5, 0.75, 0.9)
+qr_heteroscedastic <- list()
+
+for (tau in taus) {
+  cat("Quantile =", tau, "\n")
+  beta1.true <- beta1_original + qnorm(tau) * sigma_error * beta_error
+  cat("True slope =", beta1.true, "\n")
+ 
+  for (i in seq_along(sample_size)) {
+    n <- sample_size[i]
+    coverage <- logical(repli)
+    slope <- numeric(repli)
+    se_slope <- numeric(repli)
+    power <- logical(repli)
+   
+    for (j in 1:repli) {
+      x <- runif(n, min = 0, max = 5)
+      y <- beta0_original + beta1_original * x + rnorm(n, mean_error, sigma_error) *(1 + x * beta_error)
+     
+      dat <- data.frame(x = x, y = y)
+      qr <- rq(y ~ x, tau = tau, data = dat)
+     
+      slope[j] <- coef(qr)[2]
+     
+      sum_rq <- summary(qr, se = "nid")
+      se_slope[j] <- sum_rq$coefficients["x", "Std. Error"]
+    
+      ci_lower <- slope[j] - 1.96 * se_slope[j]
+      ci_upper <- slope[j] + 1.96 * se_slope[j]
+     
+      coverage[j] <- (ci_lower <= beta1.true) && (ci_upper >= beta1.true)
+      power[j] <- !(ci_lower <= 0 && ci_upper >= 0)
+      bias[j] <- slope[j] - beta1.true
+    }
+    
+    results <- tibble(
+      Run = 1:repli,
+      Sample_Size = n,
+      Model = paste("QR", tau, sep = "_"),
+      Slope = round(slope, 4),
+      Bias = bias,
+      SE_Slope = round(se_slope, 4),
+      Coverage = coverage,
+      Power = power,
+      CI_Lower = round(slope - 1.96 * se_slope),
+      CI_Upper = round(slope + 1.96 * se_slope),
+      True_Slope = round(beta1.true, 4)
+    )
+    
+    qr_heteroscedastic <- append(qr_heteroscedastic, list(results))
+  }
+}
+ols_qr_heteroscedastic <- bind_rows(ols_qr_heteroscedastic, bind_rows(qr_heteroscedastic))
+
+ols_qr_heteroscedastic[seq(1, nrow(ols_qr_heteroscedastic), by = 1000), ]
+```
+
+```{r}
+models <- unique(ols_qr_heteroscedastic$Model)
+
+for (mod in models) {
+  
+  df_mod <- filter(ols_qr_heteroscedastic, Model == mod)
+  ci_lower_avg <- mean(df_mod$CI_Lower)
+  ci_upper_avg <- mean(df_mod$CI_Upper)
+  True_Slope <- mean(df_mod$True_Slope)
+  Bias <- mean(df_mod)
+  slope_all_heter <- ggplot(ols_qr_heteroscedastic, aes(x = factor(Sample_Size), y = Slope, fill = Model)) +
+  geom_boxplot(alpha = 0.7, outlier.alpha = 0.3) +
+  geom_hline(data = distinct(ols_qr_heteroscedastic, Model, True_Slope), 
+             aes(yintercept = True_Slope, color = Model)) +
+  labs(title = "Estimated vs True Slopes",
+       x = "Sample Size", y = "Estimated Slope") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+  saveRDS(slope_all_heter, "slope_all_heter.rds")
+
+  if (mod == "OLS") {
+    p <- ggplot(df_mod, aes(x = factor(Sample_Size), y = Slope)) +
+    geom_boxplot(alpha = 0.7, outlier.alpha = 0.3, fill = "steelblue") +
+    geom_hline(aes(yintercept = mean(Slope)), 
+               color = "red", linetype = "dashed", linewidth = 0.8) +
+    annotate("rect", xmin = -Inf, xmax = Inf,
+             ymin = ci_lower_avg,
+             ymax = ci_upper_avg,
+             fill = "blue",
+             alpha = 0.07) +
+    annotate("text", x = Inf, y = True_Slope + 0.5,
+             label = paste("Average Slope =", round(True_Slope, 3)),
+             hjust = 1, vjust = 0,color = "red", size = 4,
+             fontface = "bold")
+    labs(title = paste("Slope - ", mod), x = "Sample Size", y = "") +
+    theme_minimal()
+  } else {
+    p <- ggplot(df_mod, aes(x = factor(Sample_Size), y = Slope)) +
+    geom_boxplot(alpha = 0.7, outlier.alpha = 0.3, fill = "steelblue") +
+    geom_hline(aes(yintercept = True_Slope), 
+               color = "red", linetype = "dashed", linewidth = 0.8) +
+    annotate("rect", xmin = -Inf, xmax = Inf,
+             ymin = ci_lower_avg,
+             ymax = ci_upper_avg,
+             fill = "blue",
+             alpha = 0.07) +
+    annotate("text", x = Inf, y = True_Slope + 0.5,
+             label = paste("True Slope =", round(True_Slope, 3)),
+             hjust = 1, vjust = 0,color = "red", size = 4,
+             fontface = "bold") +
+    labs(title = paste("Slope - ", mod),
+         x = "Sample Size", y = "") +
+    scale_fill_brewer(palette = "Set3") +
+    theme_minimal()
+  }
+  print(p)
+  saveRDS(p, paste0(mod,"_heters"))
+}
+```
+
+```{r}
+bias_heter <- ggplot(ols_qr_heteroscedastic, aes(x = factor(Sample_Size), y = Bias, fill = Model)) +
+  geom_boxplot() +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red", linewidth = 0.8) +
+  labs(title = "Distribution of Slope Estimates by Sample Size", x = "Sample Size", y = "Bias")
+print(bias_heter)
+saveRDS(bias_heter, "Bias_all_heter")
+```
+
+```{r}
+power_coverage_heter <- ols_qr_heteroscedastic %>%
+  group_by(Sample_Size, Model) %>%
+  summarise(Power_rate = mean(Power) * 100,
+    Coverage_rate = mean(Coverage) * 100,
+    .groups = "drop"
+  )
+
+power_heter <- ggplot(power_coverage_heter, aes(x = Sample_Size, y = Power_rate, color = Model)) +
+  geom_line() +
+  geom_hline(yintercept = 95, linetype = "dashed", color = "red", linewidth = 0.8) +
+  annotate("rect", 
+           xmin = -Inf, xmax = Inf,
+           ymin = 95 - 1.96 * sqrt(0.05 * 0.95/repli)*100,
+           ymax = 95 + 1.96 * sqrt(0.05 * 0.95/repli)*100,
+           alpha = 0.1, fill = "blue") +
+  labs(title = "Distribution of Power Rate", x = "Sample Size", y = "Power percentage") +
+  theme(legend.position = "none")
+
+cover_heter <- ggplot(power_coverage_heter, aes(x = Sample_Size, y = Coverage_rate, color = Model)) +
+  geom_line() +
+  geom_hline(yintercept = 95, linetype = "dashed", color = "red", linewidth = 0.8) +
+  annotate("rect", 
+           xmin = -Inf, xmax = Inf,
+           ymin = 95 - 1.96 * sqrt(0.05 * 0.95/repli)*100,
+           ymax = 95 + 1.96 * sqrt(0.05 * 0.95/repli)*100,
+           alpha = 0.1, fill = "blue") +
+  labs(title = "Distribution of Coverage Rate", x = "Sample Size", y = "Coverage percentage")
+
+library(patchwork)
+power_heter | cover_heter
+
+saveRDS(power_heter, "power_heter")
+saveRDS(cover_heter, "cover_heter")
+```
+
+## Skewed with constant variance simulation
+
+OLS
+
+```{r eval = T, warning = F, message = F}
+# library(sn) # library of skew to normal dsitribution
+library(sn)
+set.seed(479)
+
+skewness <- c(0, 2, 2.5, 2.7, 3, 6, 7)
+
+ols_skew <- list()
+
+for (skew in skewness) {
+  cat("\nSkewness =", skew, "\n")
+  
+  for (i in seq_along(sample_size)) {
+    n <- sample_size[i]
+    
+    slope <- numeric(repli)
+    bias <- numeric(repli)
+    coverage <- logical(repli)
+    interval_length <- numeric(repli)
+    power <- logical(repli)
+    absolute_percentage_bias <- numeric(repli)
+    se_slope <- numeric(repli)
+   
+    for (j in 1:repli) {
+      # Generate error
+      # if (skew == 0) {
+      #   error <- rnorm(n, mean = mean_error, sd = sigma_error)
+      # } else {
+      #   shape <- 4 / skew^2
+      #   rate <- sqrt(shape) / sigma_error
+      #   error <- rgamma(n, shape = shape, rate = rate)
+      #   error <- error - shape / rate   # center to mean 0
+      # }
+if (abs(skew) < 0.01) {
+  error <- rnorm(n, mean = mean_error, sd = sigma_error)
+} else {
+  # Convert desired mean=0, sd=3.4, and skewness into skew-normal parameters
+  cp_params <- c(mean = mean_error, sd = sigma_error, skewness = skew)
+  dp_params <- cp2dp(cp_params, family = "SN")
+  
+  error <- rsn(n, dp = dp_params)
+}
+
+# Optional: Quick check (you can remove later)
+# cat("Actual mean:", round(mean(error), 4), " | Actual sd:", round(sd(error), 4), "\n")
+      x <- runif(n, 0, 5)
+      y <- beta0_original + beta1_original * x + error
+      dat <- data.frame(x = x, y = y)
+     
+      ols <- lm(y ~ x, data = dat)
+      slope[j] <- coef(ols)[2]
+      
+      se_slope[j] <- summary(ols)$coefficients["x", "Std. Error"]
+      
+      ci_lower <- slope[j] - 1.96 * se_slope[j]
+      ci_upper <- slope[j] + 1.96 * se_slope[j]
+      
+      coverage[j] <- (ci_lower <= beta1_original) && (ci_upper >= beta1_original)
+      
+      bias[j]          <- (slope[j] - beta1_original) / beta1_original * 100
+      interval_length[j] <- ci_upper - ci_lower
+      power[j]         <- summary(ols)$coefficients["x", "Pr(>|t|)"] < 0.05
+      
+      absolute_percentage_bias[j] <- abs(slope[j] - beta1_original) / beta1_original * 100
+    }
+    
+    results <- tibble(
+    Run           = 1:repli,
+    Sample_Size   = n,
+    Model         = "OLS",
+    Skewness = skew,
+    Slope       = round(slope, 4),
+    Bias = round(bias, 4),
+    SE_Slope    = round(se_slope, 4),
+    Coverage    = coverage,
+    Power       = power,
+    CI_Lower    = round(slope - 1.96 * se_slope),
+    CI_Upper    = round(slope + 1.96 * se_slope),
+    Interval_length = interval_length,
+    True_Slope = round(beta1_original, 4)
+  )
+  ols_skew <- append(ols_skew, list(results))
+  }
+}
+
+ols_skew <- bind_rows(ols_skew)
+
+head(ols_skew, n = 3)
+```
+
+```{r eval = T, warning = F, message = F}
+qr_skew <- list()
+
+for (skew in skewness) {
+  cat("\nSkewness =", skew, "\n")
+  
+  for (i in seq_along(sample_size)) {
+    n <- sample_size[i]
+    
+    slope <- numeric(repli)
+    bias  <- numeric(repli)
+    coverage <- logical(repli)
+    se_slope         <- numeric(repli)
+    interval_length <- numeric(repli)
+    power <- logical(repli)
+    absolute_percentage_bias <- numeric(repli)
+    for (j in 1:repli) {
+      # Error generation
+      if (abs(skew) < 0.01) {
+  error <- rnorm(n, mean = 0, sd = sigma_error)
+} else {
+  # Convert desired mean=0, sd=3.4, and skewness into skew-normal parameters
+  cp_params <- c(mean = 0, sd = sigma_error, skewness = skew)
+  dp_params <- cp2dp(cp_params, family = "SN")
+  
+  error <- rsn(n, dp = dp_params)
+}
+      
+      x <- runif(n, 0, 5)
+      y <- beta0_original + beta1_original * x + error
+      dat <- data.frame(x = x, y = y)
+      
+      qr_fit <- rq(y ~ x, tau = 0.5, data = dat)
+      
+      slope[j] <- coef(qr_fit)[2]
+      
+      sum_qr <- summary(qr_fit, se = "boot", bsmethod = "mcmb")
+      se_slope[j] <- sum_qr$coefficients["x", "Std. Error"]
+      
+      ci_lower <- slope[j] - 1.96 * se_slope[j]
+      ci_upper <- slope[j] + 1.96 * se_slope[j]
+      bias <- slope[j] - beta1_original
+      coverage[j]     <- (ci_lower <= beta1_original) && (ci_upper >= beta1_original)
+      interval_length[j] <- ci_upper - ci_lower
+      power[j]        <- (ci_lower > 0) || (ci_upper < 0)   # 0 not in CI
+      absolute_percentage_bias[j] <- abs(slope[j] - beta1_original) / beta1_original * 100
+    }
+    
+    # Create results tibble
+    results <- tibble(
+      Run = 1:repli,
+      Sample_Size = n,
+      Model = "QR_tau_0.5",
+      Skewness = skew,
+      Slope = slope,
+      Bias = round(bias, 4),
+      SE_Slope = se_slope,
+      Coverage = coverage,
+      Power = power,
+      CI_Lower = slope - 1.96 * se_slope,
+      CI_Upper = slope + 1.96 * se_slope,
+      Interval_length = interval_length,
+      True_Slope = beta1_original
+    )
+    
+    qr_skew <- append(qr_skew, list(results))
+  }
+}
+
+# Combine OLS and QR
+ols_qr_skew <- bind_rows(ols_skew, bind_rows(qr_skew))
+
+# Quick view
+ols_qr_skew[seq(1, nrow(ols_qr_skew), by = 1000), ]
+```
+
+```{r}
+bias_skew <- ggplot(ols_qr_skew, aes(x = factor(Sample_Size), y = Bias, fill = Model)) +
+  geom_boxplot(alpha = 0.7, outlier.alpha = 0.3) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red", linewidth = 0.8) +
+  facet_wrap(~ Skewness, scales = "free_y", ncol = 3) +
+  labs(title = "Bias of Slope Estimates", x = "Sample Size", fill = "Model") +
+  theme_minimal()
+print(bias_skew)
+saveRDS(bias_skew, "bias_skew")
+```
+
+```{r}
+slope_skew <- ggplot(ols_qr_skew, aes(x = factor(Sample_Size), y = Slope, fill = Model)) +
+  geom_boxplot() +
+  facet_wrap(~ Skewness, scales = "free_y") +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red", linewidth = 0.8) +
+  labs(title = "Distribution of Slope Estimates")
+print(bias_skew)
+saveRDS(slope_skew, "slope_skew")
+```
+
+```{r}
+power_coverage_skew <- ols_qr_skew %>%
+  group_by(Skewness, Sample_Size, Model) %>%
+  summarise(
+    Power_rate    = mean(Power) * 100,
+    Coverage_rate = mean(Coverage) * 100,
+    .groups = "drop"
+  )
+
+power_skew <- ggplot(power_coverage_skew, aes(x = Sample_Size, y = Power_rate, color = Model)) +
+  geom_line() +
+  facet_wrap(~ Skewness, scales = "free_y") +
+  geom_hline(yintercept = 95, linetype = "dashed", color = "red", linewidth = 0.8) +
+  annotate("rect", 
+           xmin = -Inf, xmax = Inf,
+           ymin = 95 - 1.96 * sqrt(95 * 0.95/repli),
+           ymax = 95 + 1.96 * sqrt(95 * 0.95/repli),
+           alpha = 0.1, fill = "blue") +
+  labs(title = "Distribution of Power Rate of Skewed Data")
+
+coverage_skew <- ggplot(power_coverage_skew, aes(x = Sample_Size, y = Coverage_rate, color = Model)) +
+  geom_line() +
+  facet_wrap(~ Skewness, scales = "free_y") +
+  geom_hline(yintercept = 95, linetype = "dashed", color = "red", linewidth = 0.8) +
+  annotate("rect", 
+           xmin = -Inf, xmax = Inf,
+           ymin = 95 - 1.96 * sqrt(95 * 0.95/repli),
+           ymax = 95 + 1.96 * sqrt(95 * 0.95/repli),
+           alpha = 0.1, fill = "blue") +
+  labs(title = "Distribution of Coverage Rate of Skewed Data")
+
+saveRDS(power_skew, "power_skew")
+saveRDS(coverage_skew, "coverage_skew")
+power_skew
+coverage_skew
+```
+
+## Type I error
+
+```{r}
+# set.seed(479)
+# typeI_results <- list()
+# for (skew in skewness) {
+#   cat("\nSkewness =", skew, "\n")
+#  
+#   for (i in seq_along(sample_size)) {
+#     n <- sample_size[i]
+#    
+#     reject_ols <- logical(repli)
+#     reject_qr <- logical(repli)
+#    
+#     for (j in 1:repli) {
+#       # Generate error
+#       if (skew == 0) {
+#         error <- rnorm(n, mean = 0, sd = 3.5)
+#       } else {
+#         shape <- 4 / skew^2
+#         rate <- sqrt(shape) / 3.5
+#         error <- rgamma(n, shape = shape, rate = rate)
+#         error <- error - mean(error)
+#       }
+#      
+#       x <- runif(n, 0, 5)
+#       y <- beta0_original + 0 * x + error # TRUE slope = 0
+#      
+#       dat <- data.frame(x = x, y = y)
+#      
+#       # OLS
+#       ols_fit <- lm(y ~ x, data = dat)
+#       p_ols <- summary(ols_fit)$coefficients["x", "Pr(>|t|)"]
+#       reject_ols[j] <- p_ols < 0.05
+#      
+#       # QR tau=0.5
+#       qr_fit <- rq(y ~ x, tau = 0.5, data = dat)
+#       sum_qr <- summary(qr_fit, se = "boot", bsmethod = "mcmb")
+#       se_qr <- sum_qr$coefficients["x", "Std. Error"]
+#       ci_l <- coef(qr_fit)[2] - 1.96 * se_qr
+#       ci_u <- coef(qr_fit)[2] + 1.96 * se_qr
+#       reject_qr[j] <- (ci_l > 0) || (ci_u < 0)
+#     }
+#    
+#     # Calculate Type I error rate + 95% CI for OLS
+#     p_ols <- mean(reject_ols)
+#     se_ols <- sqrt(p_ols * (1 - p_ols) / repli)
+#     ci_ols_lower <- p_ols - 1.96 * se_ols
+#     ci_ols_upper <- p_ols + 1.96 * se_ols
+#    
+#     # Calculate Type I error rate + 95% CI for QR
+#     p_qr <- mean(reject_qr)
+#     se_qr <- sqrt(p_qr * (1 - p_qr) / repli)
+#     ci_qr_lower <- p_qr - 1.96 * se_qr
+#     ci_qr_upper <- p_qr + 1.96 * se_qr
+#    
+#     # Store results
+#     typeI_results <- append(typeI_results, list(
+#       tibble(
+#         Sample_Size = n,
+#         Skewness = skew,
+#         Model = "OLS",
+#         TypeI_Error = p_ols,
+#         TypeI_Lower = ci_ols_lower,
+#         TypeI_Upper = ci_ols_upper,
+#         Rejections = sum(reject_ols)
+#       )
+#     ))
+#    
+#     typeI_results <- append(typeI_results, list(
+#       tibble(
+#         Sample_Size = n,
+#         Skewness = skew,
+#         Model = "QR_tau_0.5",
+#         TypeI_Error = p_qr,
+#         TypeI_Lower = ci_qr_lower,
+#         TypeI_Upper = ci_qr_upper,
+#         Rejections = sum(reject_qr)
+#       )
+#     ))
+#   }
+# }
+# typeI_df <- bind_rows(typeI_results)
+# # Display nice table
+# typeI_df %>%
+#   mutate(across(c(TypeI_Error, TypeI_Lower, TypeI_Upper), ~ round(.x * 100, 2))) %>%
+#   select(Skewness, Sample_Size, Model, TypeI_Error, TypeI_Lower, TypeI_Upper, Rejections) %>%
+#   arrange(Skewness, Sample_Size, Model)
+```
+
+```{r}
+# set.seed(479)
+# typeI_results <- list()
+# 
+# for (skew in skewness) {
+#   cat("\nSkewness =", skew, "\n")
+#  
+#   for (i in seq_along(sample_size)) {
+#     n <- sample_size[i]
+#    
+#     reject_ols <- logical(repli)
+#     reject_qr  <- logical(repli)
+#    
+#     for (j in 1:repli) {
+#       # Generate error
+#       if (skew == 0) {
+#         error <- rnorm(n, mean = 0, sd = 3.5)
+#       } else {
+#         shape <- 4 / skew^2
+#         rate  <- sqrt(shape) / 3.5
+#         error <- rgamma(n, shape = shape, rate = rate)
+#         error <- error - mean(error)
+#       }
+#      
+#       x <- runif(n, 0, 5)
+#       y <- beta0_original + 0 * x + error # TRUE slope = 0
+#      
+#       dat <- data.frame(x = x, y = y)
+#      
+#       # OLS
+#       ols_fit <- lm(y ~ x, data = dat)
+#       p_ols <- summary(ols_fit)$coefficients["x", "Pr(>|t|)"]
+#       reject_ols[j] <- p_ols < 0.05
+#      
+#       # QR tau=0.5
+#       qr_fit <- rq(y ~ x, tau = 0.5, data = dat)
+#       sum_qr <- summary(qr_fit, se = "boot", bsmethod = "mcmb")   # kept as requested
+#       se_qr  <- sum_qr$coefficients["x", "Std. Error"]
+#       ci_l   <- coef(qr_fit)[2] - 1.96 * se_qr
+#       ci_u   <- coef(qr_fit)[2] + 1.96 * se_qr
+#       reject_qr[j] <- (ci_l > 0) || (ci_u < 0)
+#     }
+#    
+#     # Calculate Type I error rate + 95% CI 
+#     p_ols <- mean(reject_ols)
+#     se_ols <- sqrt(p_ols * (1 - p_ols) / repli)
+#     ci_ols_lower <- p_ols - 1.96 * se_ols
+#     ci_ols_upper <- p_ols + 1.96 * se_ols
+#    
+#     p_qr <- mean(reject_qr)
+#     se_qr <- sqrt(p_qr * (1 - p_qr) / repli)
+#     ci_qr_lower <- p_qr - 1.96 * se_qr
+#     ci_qr_upper <- p_qr + 1.96 * se_qr
+#    
+#     # Store results - now side by side (one row per n & skew)
+#     typeI_results <- append(typeI_results, list(
+#       tibble(
+#         Skewness      = skew,
+#         Sample_Size   = n,
+#         OLS_TypeI     = p_ols,
+#         OLS_Lower     = ci_ols_lower,
+#         OLS_Upper     = ci_ols_upper,
+#         OLS_Rejections = sum(reject_ols),
+#         QR_TypeI      = p_qr,
+#         QR_Lower      = ci_qr_lower,
+#         QR_Upper      = ci_qr_upper,
+#         QR_Rejections = sum(reject_qr)
+#       )
+#     ))
+#   }
+# }
+# 
+# typeI_df <- bind_rows(typeI_results)
+# 
+# # Display nice table - OLS and QR side by side
+# typeI_df %>%
+#   select(Skewness, Sample_Size, OLS_TypeI, QR_TypeI) %>%
+#   arrange(Skewness, Sample_Size)
+#   print(typeI_df)
+```
+
+```{r}
+set.seed(479)
+typeI_results <- list()
+
+for (skew in skewness) {
+  cat("\nSkewness =", skew, "\n")
+ 
+  for (i in seq_along(sample_size)) {
+    n <- sample_size[i]
+   
+    reject_ols <- logical(repli)
+    reject_qr  <- logical(repli)
+   
+    for (j in 1:repli) {
+      # Generate error
+      if (skew == 0) {
+        error <- rnorm(n, mean = 0, sd = 3.5)
+      } else {
+        shape <- 4 / skew^2
+        rate  <- sqrt(shape) / 3.5
+        error <- rgamma(n, shape = shape, rate = rate)
+        error <- error - mean(error)
+      }
+     
+      x <- runif(n, 0, 5)
+      y <- beta0_original + 0 * x + error # TRUE slope = 0
+     
+      dat <- data.frame(x = x, y = y)
+     
+      # OLS
+      ols_fit <- lm(y ~ x, data = dat)
+      p_ols <- summary(ols_fit)$coefficients["x", "Pr(>|t|)"]
+      reject_ols[j] <- p_ols < 0.05
+     
+      # QR tau=0.5
+      qr_fit <- rq(y ~ x, tau = 0.5, data = dat)
+      sum_qr <- summary(qr_fit, se = "boot", bsmethod = "mcmb")
+      se_qr  <- sum_qr$coefficients["x", "Std. Error"]
+      ci_l   <- coef(qr_fit)[2] - 1.96 * se_qr
+      ci_u   <- coef(qr_fit)[2] + 1.96 * se_qr
+      reject_qr[j] <- (ci_l > 0) || (ci_u < 0)
+    }
+   
+    # Calculate Type I error rate + 95% CI for OLS
+    p_ols <- mean(reject_ols)
+    se_ols <- sqrt(p_ols * (1 - p_ols) / repli)
+    ci_ols_lower <- p_ols - 1.96 * se_ols
+    ci_ols_upper <- p_ols + 1.96 * se_ols
+   
+    # Calculate Type I error rate + 95% CI for QR
+    p_qr <- mean(reject_qr)
+    se_qr <- sqrt(p_qr * (1 - p_qr) / repli)
+    ci_qr_lower <- p_qr - 1.96 * se_qr
+    ci_qr_upper <- p_qr + 1.96 * se_qr
+   
+    # Store results - one row per model (as requested)
+    typeI_results <- append(typeI_results, list(
+      tibble(
+        Skewness      = skew,
+        Sample_Size   = n,
+        Model         = "OLS",
+        TypeI_Error   = p_ols,
+        TypeI_Lower   = ci_ols_lower,
+        TypeI_Upper   = ci_ols_upper,
+        Rejections    = sum(reject_ols)
+      )
+    ))
+    
+    typeI_results <- append(typeI_results, list(
+      tibble(
+        Skewness      = skew,
+        Sample_Size   = n,
+        Model         = "QR_0.5",
+        TypeI_Error   = p_qr,
+        TypeI_Lower   = ci_qr_lower,
+        TypeI_Upper   = ci_qr_upper,
+        Rejections    = sum(reject_qr)
+      )
+    ))
+  }
+}
+
+typeI_df <- bind_rows(typeI_results)
+
+# Display nice table
+typeI_df %>%
+  select(Skewness, Sample_Size, Model, TypeI_Error, TypeI_Lower, TypeI_Upper, Rejections) %>%
+  arrange(Skewness, Sample_Size, Model)
+```
+
+```{r}
+# ggplot(typeI_df, aes(x = factor(Sample_Size), y = TypeI_Error, color = Model)) +
+#   geom_point(size = 3) +
+#   geom_errorbar(aes(ymin = TypeI_Lower, ymax = TypeI_Upper), width = 0.2) +
+#   geom_hline(yintercept = 0.05, linetype = "dashed", color = "red", linewidth = 0.8) +
+#   facet_wrap(~ Skewness, labeller = label_both) +
+#   labs(title = "Type I Error Rate",
+#        x = "Sample Size",
+#        y = "Type I Error Rate") +
+#   theme_minimal()
+```
+
+![](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAaCAYAAADFTB7LAAAAcElEQVR4Xu3OwQmAQAxE0bClWYCW5N06tM6V2YPg5CjoF/JhLoHAi6iqn9eOefUbqrYvHY0cQDLyAlKRNyARmYA0ZMLRkAlGQyaU72tkAtlim7r/vJqDUDjlKBROOQyFU2icQuMUGqfQuBEaV1XPOwEx96nYACK8+wAAAABJRU5ErkJggg== "Run Current Chunk")
+
+```{r}
+ggplot(typeI_df, aes(x = factor(Sample_Size), y = TypeI_Error, color = Model)) +
+  geom_point(size = 3) +
+  geom_errorbar(aes(ymin = TypeI_Lower, ymax = TypeI_Upper), width = 0.25) +
+  geom_hline(yintercept = 0.05, linetype = "dashed", color = "red", linewidth = 0.8) +
+  annotate("rect", 
+           xmin = -Inf, xmax = Inf,
+           ymin = 0.05 - 1.96 * sqrt(0.05 * 0.95 / repli),
+           ymax = 0.05 + 1.96 * sqrt(0.05 * 0.95 / repli),
+           alpha = 0.1, fill = "blue") +
+  facet_wrap(~ Skewness, labeller = label_both) +
+  labs(title = "Type I Error Rate Simulation",
+       x = "Sample Size",
+       y = "Type I Error Rate") +
+  theme_minimal()
+```
+
+```{r}
+
+```

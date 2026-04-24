@@ -1,0 +1,342 @@
+---
+title: "Untitled"
+author: "Thanh Bui"
+date: "2026-04-23"
+output: html_document
+---
+
+```{r eval = T, warning = F, message = F}
+library(quantreg)
+library(ggplot2)
+library(tidyverse)
+library(sn)
+library(lmtest)
+library(sandwich)
+```
+
+
+```{r eval = T, warning = F, message = F}
+sample_size <- c(50, 100, 200, 450, 700)
+repli <- 1000
+beta0_original <- 20
+beta1_original <- 0.6
+sigma_error <- 1.9
+mean_error <- 0
+beta_error <- 1/7
+
+slope_func <- function(data, indices) {
+  d <- data[indices, ]
+  fit <- lm(y ~ x, data = d)
+  coef(fit)[2]
+}
+```
+
+```{r}
+set.seed(479)
+x = runif(700, min = 0, max = 5)
+y = beta0_original + beta1_original * x + rnorm(700, mean_error, sigma_error)
+df = data.frame(x = x, y = y)
+
+homo_var <- ggplot(df, aes(x, y)) +
+  geom_point(alpha = 0.4, col = "gray50") +
+  geom_smooth(method = "lm", se = FALSE, aes(color = "OLS")) +
+  geom_quantile(quantiles = c(0.25, 0.5, 0.75, 0.9), aes(color = factor(..quantile..))) +
+  scale_color_manual(
+    name = "Line Type",
+    values = c(
+      "OLS" = "red",
+      "0.25" = "#1f77b4",
+      "0.5"  = "#2ca02c",
+      "0.75" = "#ff7f0e",
+      "0.9"  = "#9467bd"
+    ),
+    labels = c(
+      "OLS" = "OLS",
+      "0.25" = "25th Percentile",
+      "0.5"  = "Median",
+      "0.75" = "75th Percentile",
+      "0.9"  = "90th Percentile"
+    )
+  ) +
+  labs(title = "Homocedastic variance",
+       x = "X", y = "Y") +
+  theme_minimal() + theme(legend.position = "none")
+
+homo_var
+saveRDS(homo_var, "homo_var.rds")
+
+
+x = runif(700, min = 0, max = 5)
+y = beta0_original + beta1_original * x + rnorm(700, mean_error, sigma_error) * (1 + x * beta_error)
+df = data.frame(x = x, y = y)
+
+heter_var <- ggplot(df, aes(x, y)) +
+  geom_point(alpha = 0.4, col = "gray50") +
+  geom_smooth(method = "lm", se = FALSE, aes(color = "OLS")) +
+  geom_quantile(quantiles = c(0.25, 0.5, 0.75, 0.9), aes(color = factor(..quantile..))) +
+  scale_color_manual(
+    name = "Line Type",
+    values = c(
+      "OLS" = "red",
+      "0.25" = "#1f77b4",
+      "0.5"  = "#2ca02c",
+      "0.75" = "#ff7f0e",
+      "0.9"  = "#9467bd"
+    ),
+    labels = c(
+      "OLS" = "OLS",
+      "0.25" = "25th Percentile",
+      "0.5"  = "Median",
+      "0.75" = "75th Percentile",
+      "0.9"  = "90th Percentile"
+    )
+  ) +
+  labs(title = "Heteroscedastic variance",
+       x = "X", y = "Y") +
+  theme_minimal()
+
+
+heter_var
+saveRDS(heter_var, "heter_var.rds")
+
+```
+
+```{r eval = T, warning = F, message = F}
+
+```
+
+
+```{r eval = T, warning = F, message = F}
+taus <- c(0.25, 0.5, 0.75, 0.9)
+
+ols_qr_homoscedastic <- list()
+for (i in seq_along(sample_size)) {
+  results_list <- list()
+  n <- sample_size[i]
+
+  for (j in 1:repli) {
+    # data set creation
+    x <- runif(n, min = 0, max = 5)
+    y <- beta0_original + beta1_original * x + rnorm(n, mean_error, sigma_error)
+    dat <- data.frame(x = x, y = y)
+    
+    ols <- lm(y ~ x, data = dat)
+    ols_sum <- coeftest(ols, vcov = vcovHC(ols, type = "HC3"))
+    slope_ols <- ols_sum[2, 1]
+    se_slope_ols    <- ols_sum[2,2]
+    pval_ols <- ols_sum[2, 4]
+    ci_lower_ols <- slope_ols - 1.96 * se_slope_ols
+    ci_upper_ols <- slope_ols + 1.96 * se_slope_ols
+    
+    
+    results_list[[j]] <- tibble(
+      Run = j,
+      Sample_Size = n,
+      Model = "OLS",
+      Slope = round(slope_ols, 4),
+      Bias = slope_ols - beta1_original,
+      SE_Slope = round(se_slope_ols, 4),
+      Coverage = (ci_lower_ols <= beta1_original) && (ci_upper_ols >= beta1_original),
+      Power = pval_ols < 0.05,
+      CI_Lower = round(ci_lower_ols, 4),
+      CI_Upper = round(ci_upper_ols, 4),
+      True_Slope = beta1_original
+    )
+    
+    for (tau in taus) {
+      beta1.true <- beta1_original
+      
+      qr <- rq(y ~ x, tau = tau, data = dat)
+      sum_qr <- summary(qr, se = "nid")
+      
+      slope_qr <- sum_qr$coefficients["x", "Value"]
+      se_slope_qr  <- sum_qr$coefficients["x", "Std. Error"]
+      p_qr <- sum_qr$coefficients["x", "Pr(>|t|)"] 
+      ci_lower_qr <- slope_qr - 1.96 * se_slope_qr
+      ci_upper_qr <- slope_qr + 1.96 * se_slope_qr
+      
+      results_list[[length(results_list) + 1]] <- tibble(
+        Run = j,
+        Sample_Size = n,
+        Model = paste0("QR_", tau),
+        Slope = round(slope_qr, 4),
+        Bias = slope_qr - beta1.true,
+        SE_Slope = round(se_slope_qr, 4),
+        Coverage = (ci_lower_qr <= beta1.true) && (ci_upper_qr >= beta1.true),
+        Power = p_qr < 0.05,
+        CI_Lower = round(ci_lower_qr, 4),
+        CI_Upper = round(ci_upper_qr, 4),
+        True_Slope = round(beta1.true, 4)
+      )
+    }
+  }
+  ols_qr_homoscedastic[[i]] <- bind_rows(results_list)
+}
+
+ols_qr_homoscedastic <- bind_rows(ols_qr_homoscedastic)
+
+head(ols_qr_homoscedastic, n = 6)
+```
+
+```{r}
+models <- unique(ols_qr_homoscedastic$Model)
+
+# Create the overall multi-model plot ONCE (outside the loop)
+slope_all_homo <- ggplot(ols_qr_homoscedastic, 
+                          aes(x = factor(Sample_Size), y = Slope, fill = Model)) +
+  geom_boxplot() +
+  geom_hline(data = distinct(ols_qr_homoscedastic, Model, True_Slope),
+             aes(yintercept = True_Slope, color = Model), linewidth = 0.8) +
+  labs(title = "Estimated vs True Slopes)",
+       x = "Sample Size", y = "Estimated Slope") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+print(slope_all_homo)
+saveRDS(slope_all_homo, "slope_all_homo.rds")
+```
+
+```{r eval = T, warning = F, message = F}
+bias_homo <- ggplot(ols_qr_homoscedastic, aes(x = factor(Sample_Size), y = Bias, fill = Model)) +
+  geom_boxplot() +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red", linewidth = 0.8) +
+  labs(title = "Distribution of Bias", x = "Sample Size", y = "Bias")
+print(bias_homo)
+saveRDS(bias_homo, "Bias_all_homo.rds")
+```
+
+```{r eval = T, warning = F, message = F}
+power_coverage_homo <- ols_qr_homoscedastic %>%
+  group_by(Sample_Size, Model) %>%
+  summarise(Power_rate = mean(Power) * 100,
+    Coverage_rate = mean(Coverage) * 100,
+    .groups = "drop"
+  )
+
+
+power_homo <- ggplot(power_coverage_homo, aes(x = Sample_Size, y = Power_rate, color = Model)) +
+  geom_line() +
+  geom_hline(yintercept = 95, linetype = "dashed", color = "red", linewidth = 0.8) +
+  labs(title = "Distribution of Power Rate", x = "Sample Size", y = "Power percentage") +
+  theme(legend.position = "none")
+
+cover_homo <- ggplot(power_coverage_homo, aes(x = Sample_Size, y = Coverage_rate, color = Model)) +
+  geom_line() +
+  geom_hline(yintercept = 95, linetype = "dashed", color = "red", linewidth = 0.8) +
+  annotate("rect", 
+           xmin = -Inf, xmax = Inf,
+           ymin = 95 - 1.96 * sqrt(0.05 * 0.95/repli)*100,
+           ymax = 95 + 1.96 * sqrt(0.05 * 0.95/repli)*100,
+           alpha = 0.1, fill = "blue") +
+  labs(title = "Distribution of Coverage Rate", x = "Sample Size", y = "Coverage percentage")
+
+library(patchwork)
+power_homo | cover_homo
+
+saveRDS(power_homo, "power_homo.rds")
+saveRDS(cover_homo, "cover_homo.rds")
+```
+
+
+```{r eval = T, warning = F, message = F}
+set.seed(479)
+typeI_results <- list()
+
+for (i in seq_along(sample_size)) {
+  n <- sample_size[i]
+  
+  reject_ols <- logical(repli)
+  reject_qr  <- matrix(FALSE, nrow = repli, ncol = length(taus))
+ 
+  for (j in 1:repli) {
+    error <- rnorm(n, mean = mean_error, sd = sigma_error)
+    x <- runif(n, 0, 5)
+    y <- beta0_original + 0 * x + error
+    dat <- data.frame(x = x, y = y)
+   
+    # OLS
+    ols_fit <- lm(y ~ x, data = dat)
+    p_ols <- summary(ols_fit)$coefficients["x", "Pr(>|t|)"]
+    reject_ols[j] <- p_ols < 0.05
+    
+    # QR - only record rejections here
+    for (k in seq_along(taus)) {
+      tau <- taus[k]
+      qr_fit <- rq(y ~ x, tau = tau, data = dat)
+      sum_qr <- summary(qr_fit, se = "nid")
+      se_qr <- sum_qr$coefficients["x", "Std. Error"]
+      ci_l  <- coef(qr_fit)[2] - 1.96 * se_qr
+      ci_u  <- coef(qr_fit)[2] + 1.96 * se_qr
+      
+      reject_qr[j, k] <- (ci_l > 0) || (ci_u < 0)
+    }
+  }
+  
+  # OLS Summary
+  p_ols <- mean(reject_ols)
+  se_ols <- sqrt(p_ols * (1 - p_ols) / repli)
+  ci_ols_lower <- p_ols - 1.96 * se_ols
+  ci_ols_upper <- p_ols + 1.96 * se_ols
+  
+  typeI_results <- append(typeI_results, list(
+    tibble(
+      Sample_Size = n,
+      Model = "OLS",
+      TypeI_Error = p_ols,
+      TypeI_Lower = ci_ols_lower,
+      TypeI_Upper = ci_ols_upper
+    )
+  ))
+  
+  # QR Summary - one per tau
+  for (k in seq_along(taus)) {
+    tau <- taus[k]
+    p_qr <- mean(reject_qr[, k])
+    se_qr <- sqrt(p_qr * (1 - p_qr) / repli)
+    ci_qr_lower <- p_qr - 1.96 * se_qr
+    ci_qr_upper <- p_qr + 1.96 * se_qr
+    
+    typeI_results <- append(typeI_results, list(
+      tibble(
+        Sample_Size = n,
+        Model = paste0("QR_", tau),
+        TypeI_Error = p_qr,
+        TypeI_Lower = ci_qr_lower,
+        TypeI_Upper = ci_qr_upper
+      )
+    ))
+  }
+}
+
+typeI_df <- bind_rows(typeI_results)
+
+# Display nice table
+typeI_df %>%
+  select(Sample_Size, Model, TypeI_Error, TypeI_Lower, TypeI_Upper) %>%
+  arrange(Sample_Size, Model)
+```
+
+
+
+```{r eval = T, warning = F, message = F}
+typei_2models_norm <- ggplot(typeI_df, aes(x = factor(Sample_Size), y = TypeI_Error, color = Model)) +
+  geom_point(size = 3) +
+  geom_hline(yintercept = 0.05, linetype = "dashed", color = "red", linewidth = 0.8) +
+  annotate("rect", 
+           xmin = -Inf, xmax = Inf,
+           ymin = 0.05 - 1.96 * sqrt(0.05 * 0.95 / repli),
+           ymax = 0.05 + 1.96 * sqrt(0.05 * 0.95 / repli),
+           alpha = 0.1, fill = "blue") +
+  labs(title = "Type I Error Rate",
+       x = "Sample Size",
+       y = "Type I Error Rate") +
+  theme_minimal()
+
+saveRDS(typei_2models_norm, "typei_2models_norm.rds")
+typei_2models_norm
+```
+
+```{r}
+
+```
+
