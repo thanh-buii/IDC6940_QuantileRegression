@@ -22,9 +22,6 @@ editor:
 - This is a comparison study between Original Least Squares (OLS) vs. Quantile Regression (QR) [@koenker2005].
 - Though usually we want to know the average outcome of the target variable, we are more interested in the behavior of the lower 40% or upper 20% of it. 
 - For example, researchers would be more interested in the lower percentile of children's stunting distribution to assess the malnutrition situation [@Ashortstoryonhowandwhy].
-
-**How do QR and OLS compare in terms of statistical power, empirical coverage rate, and prediction interval coverage when the target variable is not normal?**
-
 - Regression models:
   - OLS: $OLS = \alpha + \beta \times X_i^T + \epsilon$
   - QR: $Q(\tau) = \alpha_{\tau} + \beta_{\tau} \times X_i^T + \epsilon_{\tau}$
@@ -35,7 +32,7 @@ editor:
 
 # Simulation
 ## Simulation {.smaller}
-- The simulation is a replicate of [@simulation].
+- The simulation is a replication of [@simulation].
     - First case: Skewed residual distribution.
     - Second case: Residual Heteroskedastic Variance.
 - For every predictor x is uniformly generated from 0 to 5, its response y is $y_i = 20 + 0.6\times x_i + \epsilon_i \sim N(0, 1.9)$
@@ -190,8 +187,8 @@ coef.stroke
 
 ## Comparing Prediction Intervals
 - Prediction interval is explained in [@heskes1996practical].
-- The n confidence interval is the interval that can capture n% of real observations.
-- 70% of the data in the middle should fall in the 70% prediction interval of OLS and between predicted $15^{th}$ and $85^{th}$ percentile of the QR models.
+- We want the n% of real observations to be equal to the size of the interval.
+- For 70% prediction interval of OLS and between predicted $15^{th}$ and $85^{th}$ percentile of the QR models, we want approximately 70% of the observed data fall within this range.
 - Prediction intervals: 50%, 70%, 80%, 90%.
 
 
@@ -212,6 +209,10 @@ pre.interval.stroket
 - QR displays better coverage in different levels of prediction intervals.
 - As the prediction intervals increase, OLS overly covers the real number of observations actually in the intervals.
 - There are other predictors that can affect stroke outcomes that are not included in this study.
+
+\begin{center}
+Thank You!
+\end{center}
 
 ```{r}
 
