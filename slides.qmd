@@ -186,9 +186,9 @@ coef.stroke
 ```
 
 ## Comparing Prediction Intervals
-- Prediction interval is explained in [@heskes1996practical].
-- We want the n% of real observations to be equal to the size of the interval.
-- For 70% prediction interval of OLS and between predicted $15^{th}$ and $85^{th}$ percentile of the QR models, we want approximately 70% of the observed data fall within this range.
+- Prediction interval is the range of future values based on the percentage of confidence interval [@heskes1996practical].
+- In this project, the number of observations fall within the prediction interval should be approximately equal to prediction range.
+- 70% prediction interval, I would expect approximately 70% of the observations, i.e., 70% coverage of the observations on an interval, fall within this range.
 - Prediction intervals: 50%, 70%, 80%, 90%.
 
 
@@ -204,11 +204,11 @@ pre.interval.stroket
 ```
 
 
-## Conclusion
-- OLS produced one value of slope estimates regardless of the skewness and different effects of the predictors in different percentiles.
+## Conclusion {.smaller}
+- OLS has flatted out the changing effect of each predictor on the stroke prevalence.
 - QR displays better coverage in different levels of prediction intervals.
-- As the prediction intervals increase, OLS overly covers the real number of observations actually in the intervals.
-- There are other predictors that can affect stroke outcomes that are not included in this study.
+- Meaningful heterogeneity that would have been missed by OLS alone: diabetes prevalence has a substantially stronger effect in high-stroke counties, while physical inactivity prevalence and smoke prevalence shows the opposite pattern in general.
+- While the analysis is limited to face value of the data, it illustrates how QR can uncover complex relationships and overcome misleading conclusions drawn from mean-based models.
 - Thank you!
 ```{r}
 
