@@ -74,7 +74,7 @@ $$
 $$
 f(x_i) = \frac{x_i^{\alpha - 1} e^{-x_i/\beta}}{\Gamma(\alpha)\,\beta^{\alpha}}, \quad \text{where } \Gamma(\alpha) = \int_0^\infty x^{\alpha -1} e^{-x} \, dx
 $$
-- To generate the skewness in R, the relationship between the skewness, standard deviation, shape and rate parameters are:
+- To generate the skewness in R, the relationship between the skewness, standard deviation, shape and rate parameters is:
 $$
 \begin{aligned}
 Skewness &= \frac{2}{\sqrt(shape)} = \frac{2}{\sqrt(\alpha)} \\

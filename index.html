@@ -167,16 +167,16 @@ window.Quarto = {
 <p>Slides: <a href="slides.html" target="_blank">slides.html</a> ( Go to <code>slides.qmd</code> to edit)</p>
 <section id="introduction" class="level2">
 <h2 class="anchored" data-anchor-id="introduction">1. Introduction</h2>
-<p>This report introduces quantile regression (QR), a powerful alternative to the well-known original least squares regression (OLS). The main goal of this report is to compare the performance between OLS and QR through functions, simulations, and applications. One main difference between the two is the focus. OLS models the conditional means, which is easily influenced by outliers or influential values, of the target variable based on the predictors. Meanwhile, quantile regression (QR) models the conditional quantiles of the target variable and is robust to the outliers. In theory, linear regression (OLS) produces one single line, whose optimal coefficients are calculated as a result of minimizing the sum of squared errors (residuals). This line represents the changes in the average value of the target variable as the predictors change. Meanwhile, the quantile regression (QR) returns a different line for any chosen <span class="math inline">\(\tau^{th}\)</span> quantile of the target variable, such as the <span class="math inline">\(10^{th}\)</span>, <span class="math inline">\(50^{th}\)</span>, or <span class="math inline">\(90^{th}\)</span> percentile. When the assumptions of OLS are violated, such as when the target variable has heteroscedastic variance, one line modeling the average target is not representative of the variance <span class="citation" data-cites="koenker2005">(<a href="#ref-koenker2005" role="doc-biblioref">Koenker 2005</a>)</span>. For its flexibility, QR reveals how the predictors affect not just the average but different parts of the distribution <span class="citation" data-cites="koenker2005 Ashortstoryonhowandwhy">(<a href="#ref-koenker2005" role="doc-biblioref">Koenker 2005</a>; <a href="#ref-Ashortstoryonhowandwhy" role="doc-biblioref">Waldmann 2018</a>)</span>.</p>
+<p>This report introduces quantile regression (QR), a powerful alternative to the well-known original least squares regression (OLS). The main goal of this report is to compare the performance between OLS and QR through simulations and applications. One main difference between the two is the focus. OLS models the conditional means, which is easily influenced by outliers or influential values, of the target variable based on the predictors. Meanwhile, quantile regression (QR) models the conditional quantiles of the target variable and is robust to the outliers. In theory, linear regression (OLS) produces one single line, whose optimal coefficients are calculated as a result of minimizing the sum of squared errors (residuals). This line represents the changes in the average value of the target variable as the predictors change. Meanwhile, the quantile regression (QR) returns a different line for any chosen <span class="math inline">\(\tau^{th}\)</span> quantile of the target variable, such as the <span class="math inline">\(10^{th}\)</span>, <span class="math inline">\(50^{th}\)</span>, or <span class="math inline">\(90^{th}\)</span> percentile. When the assumptions of OLS are violated, such as when the target variable has heteroscedastic variance, one line modeling the average target is not representative of the variance <span class="citation" data-cites="koenker2005">(<a href="#ref-koenker2005" role="doc-biblioref">Koenker 2005</a>)</span>. For its flexibility, QR reveals how the predictors affect not just the average but different parts of the distribution <span class="citation" data-cites="koenker2005 Ashortstoryonhowandwhy">(<a href="#ref-koenker2005" role="doc-biblioref">Koenker 2005</a>; <a href="#ref-Ashortstoryonhowandwhy" role="doc-biblioref">Waldmann 2018</a>)</span>.</p>
 <p>Quantile regression was originally introduced as “regression quantiles” by <span class="citation" data-cites="regression1978">(<a href="#ref-regression1978" role="doc-biblioref">Koenker and Bassett 1978</a>)</span>, and the paper provides the mathematical theorems and the process for the regression. The robustness of quantile regression lies in its resilience to outliers and to cases when the distribution’s prior assumptions are violated or unknown. As we all know, linear regression is famous and easy to interpret. However, we need to be certain about the distribution of the data or we need to transform it into one. From other well-known works, Koenker and Bassett showed that the least absolute error is a better indicator of how well a model could perform. Later, <span class="citation" data-cites="koenker2001">(<a href="#ref-koenker2001" role="doc-biblioref">Koenker and Hallock 2001</a>)</span> popularized the current “quantile regression” name and showcased its practical vale through the applications such as CEO pay, food expenditure, and infant birthweight. Throughout the years, Koenker kept updating his own development as well as others’ findings in the field of quantile regression <span class="citation" data-cites="Koenker40">(<a href="#ref-Koenker40" role="doc-biblioref">Koener 2017</a>)</span>.</p>
 <p>Waldmann <span class="citation" data-cites="Ashortstoryonhowandwhy">(<a href="#ref-Ashortstoryonhowandwhy" role="doc-biblioref">Waldmann 2018</a>)</span> provides a clear and simple view of how quantile regression works from the applied perspective. The three examples in her paper illustrate how quantile regression helps gain insights into how a change in the predictors affects different parts of the target variable differently. For example, in the analysis of child stunting in India, she shows that the effects of maternal BMI and geographic region are much stronger in the lower quantiles (severely stunted children) than at the mean. Though usually we want to know the average outcome of the target variable, we are more interested in the behavior of the lower 40% or upper 20% of it. For example, researchers would be more interested in the lower percentile of children’s stunting distribution to assess the malnutrition situation <span class="citation" data-cites="Ashortstoryonhowandwhy">(<a href="#ref-Ashortstoryonhowandwhy" role="doc-biblioref">Waldmann 2018</a>)</span> or the higher percentile for extreme temperature <span class="citation" data-cites="ExtremeTem13 ExtremeTem22 MasterClimate14">(<a href="#ref-ExtremeTem13" role="doc-biblioref">Lee et al. 2013</a>; <a href="#ref-ExtremeTem22" role="doc-biblioref"><span class="nocase">Yao et al.</span> 2022</a>; <a href="#ref-MasterClimate14" role="doc-biblioref">Marisinghe 2014</a>)</span>. <span class="citation" data-cites="areviewbiostats">(<a href="#ref-areviewbiostats" role="doc-biblioref">Huang et al. 2017</a>)</span> provides a detailed summary of multiple quantile regression’s approaches to independent data, time-to-event data and longitudinal data along with how QR produces insightful information.</p>
-<p>In the simulation, I will compare the performance of OLS and QR on linear regression, where skewness and heteroscedasticity exist. Different levels of skewness are applied to the residual distribution. Heteroscedasticity is also added through the residuals, which indirectly creates non-constant variance in the target variable. Besides simulation, simple applications of non-normal data are conducted to evaluate how OLS and QR perform in pratice.</p>
+<p>In the simulation, I will compare the performance of OLS and QR on linear regression, where skewness and heteroscedasticity exist, as a replication of <span class="citation" data-cites="simulation">(<a href="#ref-simulation" role="doc-biblioref">Howard 2018</a>)</span>. Different levels of skewness and heteroscedastic variance are introduced to the residual distribution, which directly creates non-normal behaviors in the target variable. Besides simulation, an application on modeling stroke prevalence from <span class="citation" data-cites="cdc_places_county_2024">(<a href="#ref-cdc_places_county_2024" role="doc-biblioref">CDC, n.d.</a>)</span> of non-normal data are conducted to evaluate how OLS and QR perform in practice.</p>
 </section>
 <section id="methods" class="level2">
 <h2 class="anchored" data-anchor-id="methods">2. Methods</h2>
 <section id="quantile-loss-function" class="level3">
 <h3 class="anchored" data-anchor-id="quantile-loss-function">2.1 Quantile Loss Function</h3>
-<p>For the purpose of this project, we focus on the simple quantile regression. The quantile regression is built on minimizing the mean absolute error. Let <span class="math inline">\(F(x) = P(X \le x)\)</span> be the cumulative distribution function (CDF) of a random variable X, and the associated quantile function is the inverse of the CDF. For <span class="math inline">\(\tau\)</span> be the quantile, its function is written as: <span class="math display">\[
+<p>For the purpose of this project, we focus on the simple quantile regression. The quantile regression is built on minimizing the mean absolute error. Let <span class="math inline">\(F(x) = P(X \le x)\)</span> be the cumulative distribution function (CDF) of a random variable X, and the associated quantile function is the inverse of the CDF. For <span class="math inline">\(\tau\)</span> be the percentile, its function is written as: <span class="math display">\[
 Q(\tau) = F^{-1}(\tau) = inf\{x:F(x) \ge \tau\}, \text{  }0 &lt; \tau &lt; 1
 \]</span> Here we will use linear equation to illustrate the optimization behind the quantile regression. While OLS aims to find the average response values. Since the quantile function models a specific <span class="math inline">\(\tau^{th}\)</span> percentile of the target variable, the linear quantile function at <span class="math inline">\(\tau^{th}\)</span> can be written as: <span class="math display">\[
 Q(\tau) = y_i= \alpha_{\tau} + \beta_{\tau} \times X_i + \epsilon_{\tau}
@@ -192,66 +192,79 @@ P(\epsilon(\tau) &lt; 0) = P(y_i - Q(\tau) &lt; 0) = P(y_i &lt; Q(\tau)) = \tau
 </section>
 <section id="perfromance-metrics" class="level3">
 <h3 class="anchored" data-anchor-id="perfromance-metrics">2.2 Perfromance Metrics</h3>
-<p>Since the goal is to compare the performance between OLS and QR, we need certain statistical metrics. In the simulation, designed by <span class="citation" data-cites="simulation">(<a href="#ref-simulation" role="doc-biblioref">Howard 2018</a>)</span>, since we apply Monte Carlo method and have different loss functions between OLS and QR, I will apply the standard Monte Carlo estimator of empirical statistical power, i.e.&nbsp;power percentage, and coverage probability, i.e.&nbsp;coverage percentage at the conventional level <span class="math inline">\(\alpha = 0.05\)</span> <span class="citation" data-cites="muthen2002use">(<a href="#ref-muthen2002use" role="doc-biblioref">Muthén and Muthén 2002</a>)</span>. The power percentage is defined by the proportion of simulations (replications) where the null hypothesis, the slope of the regression is non-significant, is rejected. Coverage percentage is the proportion of the simulations (replications) that the true slope falls inside the 95% confidence interval. The power percentage and coverage percentage are calculated by: <span class="math display">\[
-Power = \sum_{1}^{simulations} I(p\_value &lt; 0.05), \text{ for } I(p\_value) =
+<section id="sec-simulation" class="level4">
+<h4 class="anchored" data-anchor-id="sec-simulation">2.2.1 Simulation</h4>
+<p>Since the goal is to compare the performance between OLS and QR, we need certain statistical metrics. In the simulation, designed by <span class="citation" data-cites="simulation">(<a href="#ref-simulation" role="doc-biblioref">Howard 2018</a>)</span>, since we apply Monte Carlo method and have different loss functions between OLS and QR, I will apply the standard Monte Carlo estimator of empirical statistical power, i.e., power percentage, and coverage probability, i.e., coverage percentage at the conventional level <span class="math inline">\(\alpha = 0.05\)</span> <span class="citation" data-cites="muthen2002use">(<a href="#ref-muthen2002use" role="doc-biblioref">Muthén and Muthén 2002</a>)</span>. The power percentage is defined by the proportion of simulations (replications) where the null hypothesis, the slope of the regression is non-significant, is rejected. Coverage percentage is the proportion of the simulations (replications) that the true slope falls inside the 95% confidence interval. The power percentage and coverage percentage are calculated by: <span class="math display">\[
+Power = \frac{1}{Simulations} \sum_{1}^{simulations} I(p\_value &lt; 0.05), \text{ for } I(p\_value) =
 \begin{cases}
 1 &amp; \text{if } p\_value &lt; 0.05 \\
 0 &amp; \text{otherwise}
 \end{cases}
 \]</span> <span class="math display">\[
-Coverage = \sum_{1}^{simulations} I(LB_{95} &lt; slope &lt; UP_{95})
+Coverage = \frac{1}{Simulations}\sum_{1}^{simulations} I(LB_{95} &lt; slope &lt; UP_{95})
 \]</span> Another performance metric, also introduced in <span class="citation" data-cites="muthen2002use">(<a href="#ref-muthen2002use" role="doc-biblioref">Muthén and Muthén 2002</a>)</span> is the empirical Type I error rate. It is defined exactly as the Power Percentage but based on the true slope is 0. Thus, when the simulation function has no slope, Type I error computes the proportion of models returning non-zero slope. <span class="math display">\[
 \text{Type I error} = \frac{1}{Simulations}\sum_{1}^{simulations} I(p_value &lt; 0.05)
 \]</span></p>
-<p>Different from the simulation, I will compare the performance between OLS and QR based on the coverage of their prediction intervals. Particularly, 70% of the data in the middle should fall in the 70% prediction interval of OLS and between predicted <span class="math inline">\(15^{th}\)</span> and <span class="math inline">\(85^{th}\)</span> percentile of the QR models.</p>
+</section>
+<section id="application-on-stroke-prevalence" class="level4">
+<h4 class="anchored" data-anchor-id="application-on-stroke-prevalence">2.2.2 Application on Stroke Prevalence</h4>
+<p>Different from the simulation, I will compare the performance between OLS and QR based on the coverage of their prediction intervals <span class="citation" data-cites="heskes1996practical">(<a href="#ref-heskes1996practical" role="doc-biblioref">Heskes 1996</a>)</span>. Prediction interval is the range of future values based on the percentage of confidence interval. In this project, the number of observations fall within the prediction interval should be approximately equal to prediction range if the model fits correctly. For instance, for 70% prediction interval, I would expect approximately 70% of the observations, i.e., 70% coverage of the observations on an interval, fall within this range. There are four intervals in this project, 50%, 70%, 80% and 90% to illustrate the coverage behaviors of OLS and QR. To assess the uncertainty, the 90% confidence interval of these prediction ranges are also added.</p>
+</section>
 </section>
 </section>
 <section id="simulation" class="level2">
 <h2 class="anchored" data-anchor-id="simulation">3. Simulation</h2>
-<p>This section is to provide a comprehensive comparison between OLS and QR on simple linear equation. This study employs a Monte Carlo simulation <span class="citation" data-cites="Montecarlomath2019">(<a href="#ref-Montecarlomath2019" role="doc-biblioref">Morris et al. 2019</a>)</span> to compare the finite-sample performance of OLS and QR when errors deviate from normality. The key design steps are: Key design steps are identify the goal, e.g.&nbsp;to compare OLS and QR, specify the model, e.g.&nbsp;the linear function, decide the varying factors, e.g.&nbsp;sample sizes and the non-normal error terms, pick the number of replication, which is also often called simulations, and choose the performance criteria <span class="citation" data-cites="Burton2006">(<a href="#ref-Burton2006" role="doc-biblioref">Burton et al. 2006</a>)</span>.</p>
-<p>Here we create the synthesized data set based on the violation of the error, i.e., residual, distribution in linear regression. The two scenario of violation are replicate of <span class="citation" data-cites="simulation">(<a href="#ref-simulation" role="doc-biblioref">Howard 2018</a>)</span> with the performance metrics explained in section 2.2. The first scenario removes the normality of the residuals by adding skewness while keeping the mean and variance constant. The second scenario adds heteroscedasticity in the error which also create the heteroscedasticity in the linear function while keeping the mean of error at 0.</p>
-<p>Both of the simulation cases are represented in <span class="citation" data-cites="simulation">(<a href="#ref-simulation" role="doc-biblioref">Howard 2018</a>)</span>, where the target variable is <span class="math display">\[
-y_i = 20 + 0.6\times x_i + \epsilon_i \sim N(0, 1.9)
-\]</span></p>
-<p>As a result, <span class="citation" data-cites="simulation">(<a href="#ref-simulation" role="doc-biblioref">Howard 2018</a>)</span>, Power Rate and Coverage Rate in QR surpass those in OLS once the skewness exceeds 2. Also, type I error of OLS when the sample is small, i.e.&nbsp;20, fall below the 95% confidence interval of Type I error. Picking up from here paper, I will pick up the skewness from 1.5 to 8.</p>
-<p>Since linear regression assumes normality of the error distribution, the simulation provides non-normal error distribution by adding skewness to the error distribution while keeping the variance as constant. The second case provides a comparison of two models when the variance in the error distribution increases as <span class="math inline">\(x_i\)</span> increases. The simulation will be conducted on different sizes, <span class="math inline">\(n = 50, 100, 200, 450, 700\)</span>. The coverage percentage, power percentage, mean absolute error, and standard error are used as evaluating criteria.</p>
-<p>As the sample size increases, we expect the standard error of the estimate, e.g.&nbsp;slope, decreases. Additionally, for each data set, we apply bootstrapping method to re-sample each data set to build the confidence intervals of the slope. In our simulation, we set re-sampling at 199.</p>
-</section>
-<section id="skewed-residual-distribution" class="level2">
-<h2 class="anchored" data-anchor-id="skewed-residual-distribution">3.1 Skewed residual distribution</h2>
-<p>In this scenario, the skewness in the error distribution is created by the Gamma distribution <span class="citation" data-cites="simulation">(<a href="#ref-simulation" role="doc-biblioref">Howard 2018</a>)</span> since it provides simple establishment of skewness. There are five levels of skewness in this case, <span class="math inline">\(s = 0, 2.5, 3, 4, 4.5, 5\)</span>. The mean and standard deviation remain constant. Error distribution if the probability density function (PDF) of Gamma distribution: <span class="math display">\[
-f(x_i) = \frac{x_i^{\alpha - 1} e^{-x_i/\beta}}{\Gamma(\alpha)\,\beta^{\alpha}}, \quad \text{where } \Gamma(\alpha) = \int_0^\infty x^{\alpha -1} e^{-x} \, dx
-\]</span> With <span class="math inline">\(\alpha\)</span> is the shape parameter and <span class="math inline">\(\beta\)</span> is the scale parameter, we have the mean, standard deviation, and skewness of the error distribution as follows: <span class="math display">\[
-\begin{aligned}
-STD &amp;= \sqrt(shape) \times rate = \sqrt(\alpha) \times \beta \\
-Skewness &amp;= \frac{2}{\sqrt(shape)} = \frac{2}{\sqrt(\alpha)} \\
-E(\epsilon) &amp;= shape \times rate = \alpha \times \beta
-\end{aligned}
-\]</span></p>
-<p>First, we pick the <span class="math inline">\(E(\epsilon) = 0\)</span> and <span class="math inline">\(STD = 1.9\)</span> for the error distribution. Next, we use the predefined skewness, <span class="math inline">\(s = 0, 1, 2, 3, 6\)</span>, to calculate the shape parameter, then use the standard deviation function to calculate the rate parameter. Since the mean values of the error will be shifted from 0, we subtract the error values that are generated by the Gamma distribution from the <span class="math inline">\(shape \times rate\)</span>. We will compare OLS vs.&nbsp;QR at <span class="math inline">\(\tau = 0.5\)</span>, i.e.&nbsp;median regression, in this case since mean and variance of error are kept constant.</p>
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(patchwork)</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="co">#| fig-cap: "Distribution of Slope Estimates between OLS and QR(r = 0.5) at different skewness levels"</span></span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: fig-slope_skew</span></span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>slope_skew <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"slope_skew.rds"</span>)</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>slope_skew</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(patchwork)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+<p>This section provides a comprehensive comparison between OLS and QR on simple linear equation, as a replication of <span class="citation" data-cites="simulation">(<a href="#ref-simulation" role="doc-biblioref">Howard 2018</a>)</span>. This study employs a Monte Carlo simulation <span class="citation" data-cites="Montecarlomath2019">(<a href="#ref-Montecarlomath2019" role="doc-biblioref">Morris et al. 2019</a>)</span> to compare the finite-sample performance of OLS and QR when errors deviate from normality. The key design steps are: Key design steps are identify the goal, e.g.&nbsp;to compare OLS and QR, specify the model, e.g.&nbsp;the linear function, decide the varying factors, e.g.&nbsp;sample sizes and the non-normal error terms, pick the number of replication, which is also often called simulations, and choose the performance criteria <span class="citation" data-cites="Burton2006">(<a href="#ref-Burton2006" role="doc-biblioref">Burton et al. 2006</a>)</span>.</p>
+<p>The two non-normal behaviors are:</p>
+<ul>
+<li>Positive skewed to the right with multiple skewness levels.</li>
+<li>Increasing variance as predictor increases.</li>
+</ul>
+<p>There are 1000 replications for both cases, the predictor x is generated uniformly from 0 to 5, with the response variable y follows this linear equation: <span class="math display">\[
+y_i = 20 + 0.6\times x_i + \epsilon_i \sim N(0, 1.9)
+\]</span> The original residuals (errors) distribution follows a normal distribution <span class="math inline">\(N(0, 1.9)\)</span>. The simulation will be conducted on different sizes, <span class="math inline">\(n = 50, 100, 200, 450, 700\)</span>, to access the stability of the performance metrics in <a href="#sec-simulation" class="quarto-xref">Section&nbsp;2.2.1</a>. To invalidate the normal behaviors (assumptions) of the equation, such as the symmetric bell shape and constant variance, the non-normal behaviors will be added through the residual distribution. When fitting the QR in R, case bootstrapping <span class="citation" data-cites="bickel1981some">(<a href="#ref-bickel1981some" role="doc-biblioref">Bickel and Freedman 1981</a>)</span>, a re-sampling method in simualtion by pair of (x, y) are carried out to reduce the conservation of QR. Then the power percentage and coverage percentage are calculated and expected to reach approximately 95%, while type I error rate can be close to 5%. Regardless, the results of each metric are recorded with 95% confidence interval.</p>
+<section id="skewed-residual-distribution" class="level3">
+<h3 class="anchored" data-anchor-id="skewed-residual-distribution">3.1 Skewed Residual Distribution</h3>
+<p>In this scenario, the skewness in the error distribution is created by replacing the Normal distribution by the Gamma distribution <span class="citation" data-cites="simulation">(<a href="#ref-simulation" role="doc-biblioref">Howard 2018</a>)</span> of error since it provides simple establishment of skewness. There are five levels of skewness in this case, <span class="math inline">\(s = 0, 2.5, 3, 4, 4.5, 5\)</span>. <span class="math display">\[
+f(x_i) = \frac{x_i^{\alpha - 1} e^{-x_i/\beta}}{\Gamma(\alpha)\,\beta^{\alpha}}, \quad \text{where } \Gamma(\alpha) = \int_0^\infty x^{\alpha -1} e^{-x} \, dx
+\]</span> With <span class="math inline">\(\alpha\)</span> is the shape parameter and <span class="math inline">\(\beta\)</span> is the scale parameter. The mean and standard deviation are kept the same as from the Normal distribution <span class="math inline">\((\mu = 0, \sigma = 1.9)\)</span>, and the relationship between skewness, standard deviation, shape and rate parameter is straightforward to create the error distribution. The relationship is as follows: <span class="math display">\[
+\begin{aligned}
+Skewness &amp;= \frac{2}{\sqrt(shape)} = \frac{2}{\sqrt(\alpha)} \\
+STD &amp;= \sqrt(shape) \times rate = \sqrt(\alpha) \times \beta \\
+E(\epsilon) &amp;= shape \times rate = \alpha \times \beta
+\end{aligned}
+\]</span> From the pre-defined skewness, the shape parameter is computed. From the computed shape and standard deviation, rate parameter is computed. The expected value of error is the multiplication of shape and rate, thus the error created by Gamma distribution is subtracted from this multiplication to return to 0. For this scenario, the OLS’s performance is compared with QR at median, which is called median regression here.</p>
+<p>After fitting OLS and QR at median, the boxplots of bias <a href="#fig-bias-skew" class="quarto-xref">Figure&nbsp;1</a>, the power percentage <a href="#fig-power_skew" class="quarto-xref">Figure&nbsp;2</a>, coverage percentage <a href="#fig-cover_skew" class="quarto-xref">Figure&nbsp;3</a>, and type I error rate <a href="#fig-type1-qr" class="quarto-xref">Figure&nbsp;4</a> are as below. Each evaluating metric has six plots representing the results in each skewness level and each sample size. OLS is plotted in light red, and QR at median is in cyan. The expected value of each metric is in red dashed line, while the 95% confidence interval is the light shaded area.</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>bias.skew <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"bias_skew.rds"</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>bias.skew</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="index_files/figure-html/unnamed-chunk-1-1.png" class="img-fluid figure-img" width="672"></p>
+<div id="fig-bias-skew" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-bias-skew-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="index_files/figure-html/fig-bias-skew-1.png" class="img-fluid figure-img" width="672">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-bias-skew-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;1: Slope Bias between OLS and QR (r = 0.5) at Different Skewness Levels
+</figcaption>
 </figure>
 </div>
 </div>
 </div>
-<p>The slope distribution is separated by the skewness levels, shown in <strong>?@fig-slope_skew</strong>. Based on the slope distributions, the slope range deceases as the sample size increases. Although OLS shows consistent spread of the slope estimates in all levels of skewness, the spread of slope in median regression decline dramatically as the skewness increases. The slope distributions from the median regression have very small range compare to OLS. As skewness exceeds 3, the almost all of the slope estimates in median regression fall within the 95% confidence interval of the true slope, i.e.&nbsp;0.6, seen in <strong>?@fig-skew-qr</strong>.</p>
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>power_skew <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"power_skew.rds"</span>)</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>power_skew</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>power_skew <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"power_skew.rds"</span>)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>power_skew</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output-display">
 <div id="fig-power_skew" class="quarto-float quarto-figure quarto-figure-center anchored">
@@ -260,33 +273,12 @@ E(\epsilon) &amp;= shape \times rate = \alpha \times \beta
 <img src="index_files/figure-html/fig-power_skew-1.png" class="img-fluid figure-img" width="672">
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-power_skew-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Figure&nbsp;1: Distribution of Power Percentage between OLS and QR (r = 0.5) at different skewness levels
+Figure&nbsp;2: Distribution of Power Percentage between OLS and QR (r = 0.5) at Different Skewness Levels
 </figcaption>
 </figure>
 </div>
 </div>
 </div>
-<p>The power percentage, <a href="#fig-power_skew" class="quarto-xref">Figure&nbsp;1</a>, of both models accelerate to 100% starting from sample size 200. While the power percentage in median regression shifts from below 95% when skewness <span class="math inline">\(\le 2.5\)</span>, it reaches approximately 100% in other skewness regardless of sample size. Type I errors <a href="#fig-type1-qr" class="quarto-xref">Figure&nbsp;2</a> of OLS are stable an within the empirical 95% for 5% of false positive cases. However, QR at median has increasing type I error rate as the sample size increases and is conservative for smaller sample sizes.</p>
-<div class="cell">
-<details class="code-fold">
-<summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>type1_qr <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"typei_2models_skew.rds"</span>)</span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>type1_qr</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</details>
-<div class="cell-output-display">
-<div id="fig-type1-qr" class="quarto-float quarto-figure quarto-figure-center anchored">
-<figure class="quarto-float quarto-float-fig figure">
-<div aria-describedby="fig-type1-qr-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-<img src="index_files/figure-html/fig-type1-qr-1.png" class="img-fluid figure-img" width="672">
-</div>
-<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-type1-qr-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Figure&nbsp;2: Type I Error between OLS and QR(r = 0.5) at different skewness levels
-</figcaption>
-</figure>
-</div>
-</div>
-</div>
-<p>For high skewness levels, the proportion of rejecting an insignificant slope increases as the sample size increases. Based on the high power percentage and low type I error, the median regression seems to perform better than the OLS.</p>
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
@@ -300,94 +292,86 @@ Figure&nbsp;2: Type I Error between OLS and QR(r = 0.5) at different skewness le
 <img src="index_files/figure-html/fig-cover_skew-1.png" class="img-fluid figure-img" width="672">
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-cover_skew-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Figure&nbsp;3: Coverage Percentage between OLS and QR(r = 0.5) at different skewness levels
+Figure&nbsp;3: Coverage Percentage between OLS and QR(r = 0.5) at Different Skewness Levels
 </figcaption>
 </figure>
 </div>
 </div>
 </div>
-<p>The coverage percentage of median regression eventually surpass those in the linear regression as sample size increases and the skewness increases. Coverage percentage by OLS and median regression are always within the 95% confidence interval of the 95% coverage, except when skewness = 4, 4.5, 5. At these skewness levels, the coverage percentage by the QR is above the confidence interval for all sample sizes.</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>type1_qr <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"typei_2models_skew.rds"</span>)</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>type1_qr</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output-display">
+<div id="fig-type1-qr" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-type1-qr-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="index_files/figure-html/fig-type1-qr-1.png" class="img-fluid figure-img" width="672">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-type1-qr-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;4: Type I Error between OLS and QR(r = 0.5) at Different Skewness Levels
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</section>
 <section id="residual-heteroskedastic-variance" class="level3">
 <h3 class="anchored" data-anchor-id="residual-heteroskedastic-variance">3.2 Residual Heteroskedastic Variance</h3>
-<p>The second scenario is to fit OLS and QR when the variance of the error increases as the <span class="math inline">\(x_i\)</span> increases. As before, the mean of error is kept at 0. The error distribution’ variance is as follows: <span class="math display">\[
+<p>The second scenario is to fit OLS and QR when the variance of the equation increases as the <span class="math inline">\(x_i\)</span> increases. To add heteroskedasticity, the original error distribution is multiplied by a linear equation, <span class="math inline">\(1 + x\times \frac{1}{7}\)</span> as follows: <span class="math display">\[
 \epsilon(x_i) = N(0, \sigma^2) \times (1 + x_i \times \frac{1}{7})
-\]</span> When the residual distribution is random, it follows a normal distribution, thus the regression line at different quantiles should not after greatly (except for smaller sample size). However, once the heteroscedasticity exists, the slopes at different quantiles, especially at the lower and upper ends, will alter from the middle. The <a href="#fig-homo-heter" class="quarto-xref">Figure&nbsp;4</a> below shows how slope of regression line increases as the the quantile increases.</p>
+\]</span> When the residual distribution is random, it follows a normal distribution, thus the regression line at different quantile levels display similar stiffness or the slopes of each regression line are similar. However, once the heteroscedasticity exists, the slope value increases as the quantile level increases. The <a href="#fig-homo-heter1" class="quarto-xref">Figure&nbsp;5</a> below illustrates this behavior in the 700 sample size. The lowest percentile’s regression line is the bottom line where the stiffness of slope is lowest, while the highest percentile’s regression line has the stiffest slope.</p>
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>homo_var <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"homo_var.rds"</span>)</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>heter_var <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"heter_var.rds"</span>)</span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>typei_2models_norm <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"typei_2models_norm.rds"</span>)</span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>p <span class="ot">&lt;-</span> homo_var <span class="sc">|</span> heter_var</span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>p</span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="co"># typei_2models_norm</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>homo_var1 <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"homo_var.rds"</span>)</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>heter_var1 <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"heter_var.rds"</span>)</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>p1 <span class="ot">&lt;-</span> homo_var1 <span class="sc">|</span> heter_var1</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>p1</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output-display">
-<div id="fig-homo-heter" class="quarto-float quarto-figure quarto-figure-center anchored">
+<div id="fig-homo-heter1" class="quarto-float quarto-figure quarto-figure-center anchored">
 <figure class="quarto-float quarto-float-fig figure">
-<div aria-describedby="fig-homo-heter-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-<img src="index_files/figure-html/fig-homo-heter-1.png" class="img-fluid figure-img" width="672">
+<div aria-describedby="fig-homo-heter1-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="index_files/figure-html/fig-homo-heter1-1.png" class="img-fluid figure-img" width="672">
 </div>
-<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-homo-heter-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Figure&nbsp;4: The change in slopes at different quantile between homoscedastic and heteroscedastic response
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-homo-heter1-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;5: Regression lines of OLS vs.&nbsp;QR (Multiple Percentiles) on Homocedastic vs.&nbsp;Heteroscedastic Data at n = 700
 </figcaption>
 </figure>
 </div>
 </div>
 </div>
-<p>Here, multiple percentile <span class="math inline">\(\tau^{th} = 25, 50, 75, 90\)</span> will be modeled, and the comparative statistics will be extracted to compare the reliability of the regression. Based on the output, quantile regression at different levels has substantially higher coverage percentage in general. However, OLS exhibits better convergence for the power percentage when the sample size is smaller. When the sample size surpass 400, the power percentage of quantile regression is either higher or very close to the corresponding one of OLS. When fitting quantile regression at the median, the standard error is lower, coverage percentage and power percentage are higher than those in OLS. This suggest that for non-homogeneity variance, median regression exhibits more robust fitting compared to OLS at certain level of heteroskedasticity.</p>
+<p>Same as previous simulation, OLS and QR are evaluated by the boxplots of slope and its bias <a href="#fig-slope-bias" class="quarto-xref">Figure&nbsp;6</a>, the power percentage <a href="#fig-power-cover-heter" class="quarto-xref">Figure&nbsp;7</a>, coverage percentage <a href="#fig-power-cover-heter" class="quarto-xref">Figure&nbsp;7</a>, and type I error rate <a href="#fig-typei-heter" class="quarto-xref">Figure&nbsp;8</a> within their 95% confidence interval as below. The expected value of each metric is plotted in red dashed line with the cnfidence interval is the shaded area.</p>
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>slope_all_heters <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"slope_all_heter.rds"</span>)</span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>ols_slope_heters <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"OLS_heters.rds"</span>)</span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>qr25_slope_heters <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"QR_0.25_heters.rds"</span>)</span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>qr50_slope_heters <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"QR_0.5_heters.rds"</span>)</span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>qr75_slope_heters <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"QR_0.75_heters.rds"</span>)</span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>qr90_slope_heters <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"QR_0.9_heters.rds"</span>)</span>
-<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>slope_all_heters <span class="sc">|</span> ols_slope_heters <span class="sc">|</span> qr25_slope_heters </span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>slope_all_heters <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"slope_all_heter.rds"</span>)</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>biashe <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"Bias_all_heter.rds"</span>)</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>p5 <span class="ot">&lt;-</span> slope_all_heters <span class="sc">|</span> biashe</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>p5</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="index_files/figure-html/unnamed-chunk-2-1.png" class="img-fluid figure-img" width="672"></p>
-</figure>
+<div id="fig-slope-bias" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-slope-bias-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="index_files/figure-html/fig-slope-bias-1.png" class="img-fluid figure-img" width="672">
 </div>
-</div>
-<details class="code-fold">
-<summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>qr50_slope_heters <span class="sc">|</span> qr75_slope_heters <span class="sc">|</span> qr90_slope_heters</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</details>
-<div class="cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="index_files/figure-html/unnamed-chunk-2-2.png" class="img-fluid figure-img" width="672"></p>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-slope-bias-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;6: Slope Estimates and Bias between OLS and QRs on Heteroscedastic Response
+</figcaption>
 </figure>
 </div>
 </div>
 </div>
-<p>Based on the estimated slope plots, the estimated range of slope in all models decrease as the sample size increases with the highest in QR at <span class="math inline">\(\tau^{th} = 0.9\)</span>. When the from sample size 200, all models except QR at <span class="math inline">\(\tau^{th} = 0.25\)</span> have the estimated slope within the 95% CI level and the interval the middle 50% quartile at sample size 800 declines by more than half of the interval at size 50.</p>
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">readRDS</span>(<span class="st">"Bias_all_heter.rds"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</details>
-<div class="cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="index_files/figure-html/unnamed-chunk-3-1.png" class="img-fluid figure-img" width="672"></p>
-</figure>
-</div>
-</div>
-</div>
-<p>The bias of the models converges to 0 with increasing sample size with QR at <span class="math inline">\(\tau^{th} = 0.9\)</span> having the most dispersion and OLS having the least dispersion.</p>
-<div class="cell">
-<details class="code-fold">
-<summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>power_heter <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"power_heter.rds"</span>)</span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>cover_heter <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"cover_heter.rds"</span>)</span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>power_heter <span class="sc">|</span> cover_heter</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>power_heter <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"power_heter.rds"</span>)</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>cover_heter <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"cover_heter.rds"</span>)</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>power_heter <span class="sc">|</span> cover_heter</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output-display">
 <div id="fig-power-cover-heter" class="quarto-float quarto-figure quarto-figure-center anchored">
@@ -396,18 +380,17 @@ Figure&nbsp;4: The change in slopes at different quantile between homoscedastic 
 <img src="index_files/figure-html/fig-power-cover-heter-1.png" class="img-fluid figure-img" width="672">
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-power-cover-heter-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Figure&nbsp;5: Power and Coverage Percentage between OLS and QRs on heteroscedastic response
+Figure&nbsp;7: Power and Coverage Percentage between OLS and QRs on Heteroscedastic Response
 </figcaption>
 </figure>
 </div>
 </div>
 </div>
-<p>Even though the power percentage converses to 100% as sample size increases, the coverage percentage fluctuates by different quantiles. OLS is the only model that has the monotonic converage percentage.</p>
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>typei_2models_he <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"typei_2models_he.rds"</span>)</span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>typei_2models_he</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>typei_2models_he <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"typei_2models_he.rds"</span>)</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>typei_2models_he</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output-display">
 <div id="fig-typei-heter" class="quarto-float quarto-figure quarto-figure-center anchored">
@@ -416,7 +399,7 @@ Figure&nbsp;5: Power and Coverage Percentage between OLS and QRs on heteroscedas
 <img src="index_files/figure-html/fig-typei-heter-1.png" class="img-fluid figure-img" width="672">
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-typei-heter-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Figure&nbsp;6: Type I Error between OLS and QRs on heteroscedastic response
+Figure&nbsp;8: Type I Error between OLS and QRs on Heteroscedastic Response
 </figcaption>
 </figure>
 </div>
@@ -424,73 +407,84 @@ Figure&nbsp;6: Type I Error between OLS and QRs on heteroscedastic response
 </div>
 </section>
 </section>
-<section id="real-life-application" class="level2">
-<h2 class="anchored" data-anchor-id="real-life-application">4. Real life application</h2>
-<section id="stroke-prevalence" class="level3">
-<h3 class="anchored" data-anchor-id="stroke-prevalence">4.1 STROKE Prevalence</h3>
-<section id="data-exploration" class="level4">
-<h4 class="anchored" data-anchor-id="data-exploration">4.1.1 Data exploration</h4>
-<p>This study uses county-level data, i.e., each observation is a county, from the contiguous United States for the year 2022. The outcome variable in this study is the crude prevalence of stroke (STROKE), measured as the percentage of adults in a county who have ever been told by a healthcare professional that they had a stroke. This variable is derived from model-based small-area estimates and is expected to be skewed in real-world county-level data. This means that some counties tend to have relatively low stroke prevalence, while a smaller number of counties—often those with higher concentrations of risk factors—exhibit substantially elevated rates. Because of this skewness and the presence of potential outliers, ordinary least squares (OLS) regression, which focuses on the conditional mean, may be sensitive to extreme values. Therefore, we compare OLS estimates with quantile regression at the median (0.5), which provides a more robust estimate of the central tendency and is less influenced by extreme observations.</p>
+<section id="stroke-prevalence-application" class="level2">
+<h2 class="anchored" data-anchor-id="stroke-prevalence-application">4. Stroke Prevalence Application</h2>
+<p>Stroke is a leading cause of death in the United States <span class="citation" data-cites="cdc2024strokefacts">(<a href="#ref-cdc2024strokefacts" role="doc-biblioref">CDC 2024b</a>)</span>. The report on CDC says that there is one person has a stroke in every 40 seconds, and dies of it for every three minutes and 14 seconds. Almost 25% of those who had stroke would have stroke again. This number is very high, and it is worth investigating. Understanding which factors and how they contribution to stroke outcomes is a informed practice to prevent or at least lower the chance of having stroke.</p>
+<p>This project uses the county level data, i.e., each observation is a county, from <span class="citation" data-cites="cdc_places_county_2024">(<a href="#ref-cdc_places_county_2024" role="doc-biblioref">CDC, n.d.</a>)</span> and <span class="citation" data-cites="countyhealthrankings">(<a href="#ref-countyhealthrankings" role="doc-biblioref">County Health Rankings &amp; Roadmaps, n.d.</a>)</span> in the United States for the year 2022. The outcome variable in this study is the crude prevalence of stroke (STROKE) from <span class="citation" data-cites="cdc_places_county_2024">(<a href="#ref-cdc_places_county_2024" role="doc-biblioref">CDC, n.d.</a>)</span>, measured as the percentage of adults in a county who have ever been told by a health professional that they had a stroke <span class="citation" data-cites="strokeexplain">(<a href="#ref-strokeexplain" role="doc-biblioref">CDC 2024a</a>)</span>. This variable is derived from a multi-level regression and post-stratification approach on data from other sources using Monte Carlo simulation, thus it values might underestimate the true prevalence.</p>
+<p>The predictors, from <span class="citation" data-cites="countyhealthrankings">(<a href="#ref-countyhealthrankings" role="doc-biblioref">County Health Rankings &amp; Roadmaps, n.d.</a>)</span> are as below:</p>
 <ul>
-<li>STROKE — Crude prevalence (%) of adults who have ever been told by a doctor that they had a stroke. This measure comes from the CDC PLACES: Local Data for Better Health, County Data 2024 release, which provides model-based small-area estimates derived from the 2022 Behavioral Risk Factor Surveillance System (BRFSS). We used the crude prevalence estimates (Data_Value_Type == “Crude prevalence” and MeasureId == “STROKE”).</li>
+<li>Adult smoking prevalence (smoke): percentage of adults who are current smokers.</li>
+<li>Diabetes prevalence (diabetes_prev): percentage of adults aged 18 and older with diagnosed diabetes.</li>
+<li>Adult obesity prevalence (obesity_prev) : percentage of adults with a body mass index ≥ 30 kg/m².</li>
+<li>Air pollution (air_pollution): average daily density of fine particulate matter (PM2.5) in µg/m³.</li>
+<li>Physical inactivity prevalence (physical_inactive): percentage of adults who reported no leisure-time physical activity.</li>
 </ul>
-<p>The following predictors are included in the analysis (all obtained from the 2022 County Health Rankings &amp; Roadmaps analytic dataset):</p>
-<ul>
-<li>smoke: Adult smoking prevalence (raw value) — percentage of adults who are current smokers. Smoking is a well-established major modifiable risk factor for stroke.</li>
-<li>diabetes_prev: Diabetes prevalence (raw value) — percentage of adults aged 18 and older with diagnosed diabetes.</li>
-<li>obesity_prev: Adult obesity prevalence (raw value) — percentage of adults with a body mass index ≥ 30 kg/m².</li>
-<li>air_pollution: Average daily density of fine particulate matter (PM2.5) in µg/m³.</li>
-<li>physical_inactive: Physical inactivity prevalence (raw value) — percentage of adults who reported no leisure-time physical activity.</li>
-</ul>
-<p>Counties with missing stroke prevalence were excluded from the analysis. The final dataset is cross-sectional and ecological in nature (county-level aggregates). The variables for the dataset are joined by the countyID. Since Stroke prevalence is right-skewed, with most counties showing relatively low prevalence but a smaller number of counties exhibiting substantially higher rates. This skewness motivated the comparison between ordinary least squares (OLS) regression and quantile regression.</p>
-<p>After merging the CDC PLACES stroke data with the County Health Rankings analytic file and county boundary information, several data cleaning steps were performed. All key variables were converted to numeric format to ensure compatibility with regression modeling. Rows containing missing values were removed, and the spatial geometry column was dropped to simplify this regression analysis. The final analytic sample consisted of 3,107 counties with complete information on stroke prevalence and all predictors. There were no remaining missing values in the outcome variable (STROKE) or the primary predictors after cleaning.</p>
-<p>To examine the bivariate relationships among variables, a correlation matrix was computed. As anticipated, stroke prevalence showed moderate to strong positive correlations with adult smoking, diabetes prevalence, and physical inactivity. The correlation matrix below with high correlation value between physical_inactive vs.&nbsp;obesity_prev and physical_inactive vs.&nbsp;diabetes_prev shows potential multicollinearity prior to regression modeling. These steps ensured that the dataset was properly prepared for subsequent ordinary least squares (OLS) and quantile regression analyses.</p>
-<p>Next, we plot the histogram of STROKE <a href="#fig-hist-stroke" class="quarto-xref">Figure&nbsp;7</a> to see the behavior of the distribution. With longer right tailed, STROKE is positive skewed by 0.6 unit. Since positive skewness violates the requirement of OLS, we can still fit STROKE by OLS and Median regression to compare the robustness. Though there is skewness, STROKE still has a bell shape very close to normal distribution. Thus, in this analysis, we expect the skewness can be remained in the residuals of OLS with small value of skew, thus there is a high chance that we will have similar results between fitting OLS and median regression as in the simulation’s results.</p>
+<section id="data-exploration" class="level3">
+<h3 class="anchored" data-anchor-id="data-exploration">4.1 Data exploration</h3>
+<p>All key variables were converted to numeric format to ensure compatibility with regression modeling. Rows containing missing values were removed, and the spatial geometry column was dropped to simplify this regression analysis. The final analytic sample consisted of 3,107 counties with complete information on stroke prevalence and all predictors. There were no remaining missing values in the outcome variable STROKE or the primary predictors after cleaning. The variables for the data set are joined by the county ID. Since Stroke prevalence is right-skewed at approximately 0.6 unit, see <a href="#fig-hist-cor" class="quarto-xref">Figure&nbsp;9</a>. This shows that though most counties have similar stroke prevalence in the lower range, there is a smaller number of counties exhibiting substantially higher rates. This skewness motivated the comparison between OLS and QR at median.</p>
 <div class="cell">
 <div class="cell-output-display">
-<div id="fig-hist-stroke" class="quarto-float quarto-figure quarto-figure-center anchored">
+<div id="fig-hist-cor" class="quarto-float quarto-figure quarto-figure-center anchored">
 <figure class="quarto-float quarto-float-fig figure">
-<div aria-describedby="fig-hist-stroke-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-<img src="index_files/figure-html/fig-hist-stroke-1.png" class="img-fluid figure-img" width="672">
+<div aria-describedby="fig-hist-cor-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="index_files/figure-html/fig-hist-cor-1.png" class="img-fluid figure-img" width="672">
 </div>
-<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-hist-stroke-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Figure&nbsp;7: Histogram of Stroke Prevalence
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-hist-cor-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;9: Histogram of Stroke Prevalence (left) and Correlation Matrix of the Variable (right)
 </figcaption>
 </figure>
 </div>
 </div>
 </div>
-<p>Next step is to identify significant predictors. Based on <a href="#fig-corr-stroke" class="quarto-xref">Figure&nbsp;8</a>, stroke prevalence has weak linear correlation to obesity prevalence, so this predictor will be removed. There is high correlation between physical inactivity prevalence and diabete prevalence at 0.79. To ensure no multicollinearity between them, predictor with variance inflation factor greater than 5 will be removed if the coefficient of the remaining predictors alter greatly with and without it in the model.</p>
+<p>To examine the bivariate relationships among variables, a correlation matrix was computed. Based on the matrix, stroke prevalence has extremely weak correlation to pollutant PM2.5 density, thus the air pollution variable is removed. Meanwhile, physical inactivity prevalence has high correlation to diabetes prevalence and obesity prevalence, signaling a possibility of multi-collinearity. To remove the multi-collinear variable, variance inflation factor (VIF) <span class="citation" data-cites="akinwande2015variance">(<a href="#ref-akinwande2015variance" role="doc-biblioref"><span class="nocase">Akinwande et al.</span> 2015</a>)</span> test is carried out on linear regression with and without high VIF variable. this These steps ensured that the data set was properly prepared to fit OLS and QR at median.</p>
+<p>After fitting the linear regression of stroke prevalence on all predictors, obesity prevalence is not a significant factor influencing the stroke outcome, thus it is removed. The VIF of physical inactivity prevalence goes from 5.37 to 4.80 after removing obesity prevalence, and the coefficients before and after are the similar. Thus, physical inactvity is kept for the final fitting. Finally, the model follows this equation: <span class="math display">\[
+\begin{aligned}
+\text{Stroke prevalence} &amp;\sim \alpha + \beta_1 \times \text{(smoke prevelence)} + \beta_2 \times \text{(diabetes prevalence)} \\
+&amp;+ \beta_3 \times \text{(physical inactivity prevalence)}
+\end{aligned}
+\]</span></p>
+</section>
+<section id="sec-data-model" class="level3">
+<h3 class="anchored" data-anchor-id="sec-data-model">4.2 Data Modeling</h3>
+<p>Stroke prevalence is fitted by OLS and QR at median. There is only mild difference between the intercepts of OLS and QR, at 0.58352 and 0.47272, respectively. It is the same for smoke prevalence and diabetes prevalence. Meanwhile, the effect or coefficient of physical inactivity prevalence in OLS is one unit less than in QR, at 0.85461 and 1.82025 respectively. The two models returns similar coefficients of the predictors as follows:</p>
+<p><span class="math display">\[
+\begin{aligned}
+\text{OLS: Stroke prevalence} &amp;\sim 0.58352 + 10.68295 \times \text{(smoke prevelence)} \\
+&amp;+ 11.50501 \times \text{(diabetes prevalence)} \\
+&amp;+ 0.85461 \times \text{(physical inactivity prevalence)}
+\end{aligned}
+\]</span> <span class="math display">\[
+\begin{aligned}
+\text{QR (median): Stroke prevalence} &amp;\sim 0.47272 + 10.78209 \times \text{(smoke prevelence)} \\
+&amp;+ 9.00408 \times \text{(diabetes prevalence)} \\
+&amp;+ 1.82025 \times \text{(physical inactivity prevalence)}
+\end{aligned}
+\]</span> In OLS, the highest influential predictor is diabetes prevalence, while it is smoke prevalence in QR model. Since we have confirm that median regression provides close fit as OLS, we can investigate the change of the effect from each predictor on the stroke outcome. To so this, the slope values of regression at the percentiles, <span class="math inline">\(\tau^{th} = 0.25, 0.50, 0.75, 0.90\)</span>, are computed and visualized in <a href="#fig-coef-stroke" class="quarto-xref">Figure&nbsp;10</a>. The slopes by OLS is plotted by dashed line, and the slopes by QR is in solid line.</p>
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>cor.stroke <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"cor.stroke.rds"</span>)</span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>cor.stroke</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>coef_stroke <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"coef.stroke.rds"</span>)</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>coef_stroke</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output-display">
-<div id="fig-corr-stroke" class="quarto-float quarto-figure quarto-figure-center anchored">
+<div id="fig-coef-stroke" class="quarto-float quarto-figure quarto-figure-center anchored">
 <figure class="quarto-float quarto-float-fig figure">
-<div aria-describedby="fig-corr-stroke-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-<img src="index_files/figure-html/fig-corr-stroke-1.png" class="img-fluid figure-img" width="672">
+<div aria-describedby="fig-coef-stroke-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="index_files/figure-html/fig-coef-stroke-1.png" class="img-fluid figure-img" width="672">
 </div>
-<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-corr-stroke-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Figure&nbsp;8: Correlation Matrix of Stroke data set
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-coef-stroke-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;10: Slope Estimates between OLS vs.&nbsp;QR on Different Percentiles Levels
 </figcaption>
 </figure>
 </div>
 </div>
 </div>
-<p>Since we suspect there is at least one multicollinearity, we perform vif test on several models, with and without physical_inactive or diabetes_prev. For the full model, vif(physical_inactive) surpasses 5, the recommend threhold to detect multicollinearity. The second model vif of all variables improves once physical_inactive is removed. The third model with diabetes_prev removed does not show much vif improvement even though multicollinearity is removed. Therefore, model two will be used to fit OLS and median regression.</p>
-</section>
-<section id="data-modeling" class="level4">
-<h4 class="anchored" data-anchor-id="data-modeling">4.1.2 Data Modeling</h4>
-<p>With same linear formula, the results of fitting OLS and median regression are as follows. Both of models illustrate that obesity is not an influence on STROKE prevalence. Adult smoking prevalence and diabetes prevalence show strong positive associations with stroke rates, while air pollution exhibit a significant negative association. The coefficients between two models are very similar, for example, smoking prevalence is OLS: 10.91 and QR: 11.02, and diabetes prevalence is QR: 13.51 and OLS: 14.40 in OLS, suggesting that its effect on the typical county is somewhat weaker than its influence on the mean. The intercept was also slightly lower in the median regression (1.01 vs.&nbsp;1.10), which is expected given the right-skewed distribution of stroke prevalence. These findings suggest that while OLS provides a good overall fit, quantile regression at the median offers more robust estimates in the presence of right-skewed outcome variable.</p>
-<p>With the OLS function as reference, the skewness of the error terms is calculated at 0.55, which is a very small number. Therefore, we expect the OLS and QR to have similar statistics such as the coefficients of the predictors. However, the prediction intervals may tell a different story.</p>
+<p>At the same time, I also add the regression lines of diabetes prevalence on stroke prevalence at, <span class="math inline">\(\tau^{th} = 0.25, 0.50, 0.75, 0.90\)</span>, to showcase how the effect of diabetes prevalence changes on different percentiles of stroke outcomes.</p>
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>plot.dist <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"plot.dist.rds"</span>)</span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>plot.dist</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>plot.dist <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"plot.dist.rds"</span>)</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>plot.dist</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output-display">
 <div id="fig-plot.dist" class="quarto-float quarto-figure quarto-figure-center anchored">
@@ -499,21 +493,27 @@ Figure&nbsp;8: Correlation Matrix of Stroke data set
 <img src="index_files/figure-html/fig-plot.dist-1.png" class="img-fluid figure-img" width="672">
 </div>
 <figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-plot.dist-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Figure&nbsp;9: OLS vs.&nbsp;QR on Stroke Prevalence by Diabete Prevalence
+Figure&nbsp;11: OLS vs.&nbsp;QR on Stroke Prevalence by Diabete Prevalence
 </figcaption>
 </figure>
 </div>
 </div>
 </div>
-<div class="cell" data-tbl-cap="Prediction Interval between OLS and QRs on Stroke Prevalence">
+<p>To access the performance of OLS and QR at median, the coverage percentage of multiple prediction intervals are recorded in <a href="#tbl-prediction" class="quarto-xref">Table&nbsp;1</a>.</p>
+<div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>pre.interval.stroket <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"pre.interval.stroket.rds"</span>)</span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>pre.interval.stroket</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>pre.interval.stroket <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"pre.interval.stroket.rds"</span>)</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>pre.interval.stroket</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
+<div id="tbl-prediction" class="cell quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-prediction-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;1: Prediction Interval between OLS and QRs on Stroke Prevalence
+</figcaption>
+<div aria-describedby="tbl-prediction-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 <div class="cell-output-display">
-<table class="caption-top table table-sm table-striped small">
-<caption>Prediction Interval between OLS and QRs on Stroke Prevalence</caption>
+<table class="cell caption-top table table-sm table-striped small">
 <thead>
 <tr class="header">
 <th style="text-align: left;">Interval</th>
@@ -546,39 +546,40 @@ Figure&nbsp;9: OLS vs.&nbsp;QR on Stroke Prevalence by Diabete Prevalence
 </table>
 </div>
 </div>
-<p>Coefficient Heterogeneity Plot</p>
-<div class="cell">
-<details class="code-fold">
-<summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>coef.stroke <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"coef.stroke.rds"</span>)</span>
-<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>coef.stroke</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</details>
-<div class="cell-output-display">
-<div id="fig-coef.stroke" class="quarto-float quarto-figure quarto-figure-center anchored">
-<figure class="quarto-float quarto-float-fig figure">
-<div aria-describedby="fig-coef.stroke-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-<img src="index_files/figure-html/fig-coef.stroke-1.png" class="img-fluid figure-img" width="672">
-</div>
-<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-coef.stroke-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Figure&nbsp;10: Slope Estimates between OLS vs.&nbsp;QR on Different Quantile Levels
-</figcaption>
 </figure>
 </div>
 </div>
-</div>
-<p>Since we have confirm that median regression provides close fit as OLS. In this section, we will check for coefficient homogeneity across the SMOKE prevalence. The figures below visualize how the estimated effects of each predictor vary across the distribution of stroke rates, <span class="math inline">\(\tau^{th} = 0.25, 0.50, 0.75, 0.90\)</span>, compared to the single OLS estimate (horizontal dashed lines). This plot directly illustrates the heterogeneity that OLS misses due to the right-skewed nature of stroke prevalence</p>
-<p>Diabetes_prev shows the clearest heterogeneity. The effect strengthens dramatically as we move to higher quantiles: from approximately 10.5 percentage points at the 25th percentile to over 21 percentage points at the 90th percentile. Since the OLS coefficient estimate (≈ 14.4) lies in the middle constantly, it understates the increasing impact in high-stroke counties and overstates it in low-stroke counties. This suggests diabetes is a particularly strong driver in counties that already have elevated stroke rates.</p>
-<p>Smoke exhibits the opposite pattern. The effect is strongest at lower quantiles (≈ 11.6 at 0.25) and weakens substantially at higher quantiles (dropping to ≈ 9.5 at 0.90). The OLS estimate (≈ 10.9) again represents an average effect, not the actually changing trend of smoke.</p>
-<p>Air_pollution displays least heterogeneity, although QR still shows more fluctuate effect of air_pollution on STROKE while OLS displays unchangable influence. The negative association becomes stronger from 0.25 (≈ –0.07) to 0.75 (≈ –0.115), then slightly weakens at 0.90.</p>
-<p>Because stroke prevalence is right-skewed, OLS provides a single “average” effect that is pulled by extreme high-stroke counties. Meanwhile, quantile regression reveals the actually heterogeneity: diabetes has a much larger impact in the upper tail (where stroke rates are already high), while smoking has a relatively larger effect among lower-stroke counties. These patterns would be completely invisible using OLS alone.</p>
 </section>
 </section>
-<section id="conclusion" class="level3">
-<h3 class="anchored" data-anchor-id="conclusion">Conclusion</h3>
-<p>This report has demonstrated both the theoretical foundations and practical advantages of quantile regression as a robust and flexible alternative to ordinary least squares (OLS) regression. Unlike OLS, which estimates only the conditional mean and can be heavily influenced by skewness, or heteroscedasticity, quantile regression provides a complete picture of how predictors affect different parts of the outcome distribution. Through simulations with skewed and heteroscedastic errors, we showed that quantile regression maintains reliable performance where OLS assumptions are violated to certain levels of skewness and heteroscedasticity. With reference to the original paper by <span class="citation" data-cites="simulation">(<a href="#ref-simulation" role="doc-biblioref">Howard 2018</a>)</span>, both simulations show that median regression produces lower mean absolute error (MAE) as skewness surpasses 2.5 consistently across sample sizes. Regardless of skewness, OLS displays consistent mean absolute error percentage. For two cases of simulation (this project and the original paper), we are hinted that as the skewness exceeds 2, quantile regression exhibits a more robust convergence to the true slope compared to OLS.</p>
-<p>In the real-world application to 2022 U.S. county-level stroke prevalence data, the comparison between OLS and quantile regression (at the median and across multiple τ values) revealed meaningful heterogeneity that would have been missed by OLS alone: diabetes prevalence had a substantially stronger effect in high-stroke counties, while smoking showed the opposite pattern. The slightly lower mean absolute error (MAE) of the median quantile regression further confirmed its robustness for typical observations in right-skewed health data.</p>
-<p>These findings underscore the value of quantile regression in public health research, where understanding effects at the tails of the distribution (e.g., high-risk population) is often more policy-relevant than the average effect. While the analysis is limited to face value of the data and does not establish causality, it illustrates how quantile regression can uncover nuanced relationships and guard against misleading conclusions drawn from mean-based models.</p>
-<p>In summary, quantile regression is not merely an extension of OLS but a powerful tool that better reflects real-world data complexities. Future work could extend these methods to longitudinal or spatial models. By moving beyond the mean, researchers can gain deeper, more actionable insights into the drivers of health outcomes.</p>
+<section id="conclusion" class="level2">
+<h2 class="anchored" data-anchor-id="conclusion">5.Conclusion</h2>
+<section id="skewed-residual-distribution-1" class="level3">
+<h3 class="anchored" data-anchor-id="skewed-residual-distribution-1">5.1 Skewed Residual Distribution</h3>
+<p>Based on the bias boxplots <a href="#fig-bias-skew" class="quarto-xref">Figure&nbsp;1</a>, the convergence to zero of bias in QR at median becomes more aggressive from skewness = 2.5 with extremely small range compared to OLS from skewness = 4 regardless of sample size. The power percentage, <a href="#fig-power_skew" class="quarto-xref">Figure&nbsp;2</a>, OLS accelerates to 100% starting from sample size 200 for all skewness level. Meanwhile, QR at median is more conservative when skewness is equal and greater than 4. Particularly, the power percentage starts from almost at 100% from small sample size to larger sample size.</p>
+<p>The coverage percentage <a href="#fig-cover_skew" class="quarto-xref">Figure&nbsp;3</a> fluctuates within the 95% confidence interval most case. For the first three skewness level, <span class="math inline">\(s = 0, 2.5, 3\)</span>, the coverage rate of QR at median is always within the confidence interval with less fluctuation compared to OLS. However, from skewness = 4, the coverage percentage is extremely high in smaller sample size, even though eventually it converges to the 95% confidence interval. Although OLS is always within the confidence interval in the high skewness levels, there is a possibility of range of the response is averaged and covered the extreme values.</p>
+<p>Type I errors <a href="#fig-type1-qr" class="quarto-xref">Figure&nbsp;4</a> of OLS are stable an within the empirical 95% for 5% of false positive cases. However, QR at median has increasing type I error rate as the sample size increases and is conservative for smaller sample sizes, e.g., type I error rate is approximately 1% when the skew is 4.5 and 5 at the smaller sample sizes.</p>
+</section>
+<section id="residual-heteroskedastic-variance-1" class="level3">
+<h3 class="anchored" data-anchor-id="residual-heteroskedastic-variance-1">5.2 Residual Heteroskedastic Variance</h3>
+<p>From <a href="#fig-homo-heter1" class="quarto-xref">Figure&nbsp;5</a>, we can confirm that the regression line at different percentiles alters as the data is heteroscedastic. With percentiles at, <span class="math inline">\(\tau^{th} = 25, 50, 75, 90\)</span>, <a href="#fig-slope-bias" class="quarto-xref">Figure&nbsp;6</a> shows that the range of both estimated slopes and their bias are different. Overall, as the sample size increases, the bias decreases and converges to zero. At the same time, the slope estimate range also declines with the increasing sample, showing good convergence. QR at <span class="math inline">\(90^{th}\)</span> percentile has the largest slope, i.e., stiffest slope, and its bias has the large range. Slope estimates of median regression and OLS are similar, thus for this test, median regression can be used instead of OLS to plot the data distribution. Notice, OLS has the smallest range of both slope and its bias. This could be due to the symmetric increase of variance.</p>
+<p>Next, the power percentage in <a href="#fig-power-cover-heter" class="quarto-xref">Figure&nbsp;7</a> converges to 100% as the sample size increases for all models. This showcases the models become more stable in larger sample sizes. Among them, OLS has the highest power percentage in general. The coverage percentage also illustrates good outcome since all of the models coverage is within the 95% confidence interval. QR at <span class="math inline">\(75^{th}\)</span> percentile has the greatest fluctuation; however, its rate is still within the confidence interval at the end. Although a few models have coverage percentage lightly below the range, the gaps are very small, and we can consider them within the confidence interval.</p>
+<p>Lastly, almost all of the type I error rate are within the 95% confidence interval of the 5% false positive rate. There are a few times the Qr models have higher or lower error rate than the range. However, since the gaps are small, we can still consider them within the 95% range. Therefore, both OLS and QR fits the data well. Since the variance is heteroscedastic, QR at median should be used in place of OLS.</p>
+</section>
+<section id="stroke-prevalence" class="level3">
+<h3 class="anchored" data-anchor-id="stroke-prevalence">5.3 Stroke Prevalence</h3>
+<p>The fitted models of OLS and QR at median are highly similar <a href="#sec-data-model" class="quarto-xref">Section&nbsp;4.2</a>. However, from <a href="#fig-coef-stroke" class="quarto-xref">Figure&nbsp;10</a>, OLS has flatted out the changing effect of each predictor on the stroke prevalence. Particularly, diabetes prevalence has higher impact on the counties with higher diagnosed stroke cases (higher percentiles). The effect goes from approximately 5 at <span class="math inline">\(25^{th}\)</span> percentile to over 20 unit at <span class="math inline">\(90^{th}\)</span> percentile, which is more than 3 times influence on lower stroke rate counties. Meanwhile, physical inactivity prevalence has the opposite effect from diabetes prevalence. From counties with lower to higher stroke prevalence, the effect of the physical inactivity prevalence declines. At some point, the effect is dismissed (at 0), then has a negative influence on the stroke prevalence. Smoke prevalence has both increasing and decreasing impact on the stroke outcome. As the percentile increases, the effect increases, but it drops by 2 units as the percentile exceeds <span class="math inline">\(75^{th}\)</span>. With OLS alone, these behaviors of the predictors will be overlooked. One can conclude that counties with high diagnosed stroke rate may need to investigate the diabetes rate in order to prevent future stroke.</p>
+<p>Another comparison between OLS and QR is through prediction interval <a href="#tbl-prediction" class="quarto-xref">Table&nbsp;1</a>. We expect the percentage of stroke prevalence of each prediction interval to be equal to its range. At the first two interval, 50%, and 70%, both OLS and QR at median returns the ranges that cover approximately 50% and 70% of the stroke prevalence. However, while QR consistently cover similar percent of stroke outcome and their intervals, OLS prediction ranges cover more than the expected number. For example, OLS cover 85.16% and 99.26% of the stroke prevalence in its 80% and 90% interval. These two coverage rates exceed by 5% and 9% from the range, which hints at the over fitting. Thus, based on the non-constant effect of preditor and good coverage rate in prediction interval, QR surpasses OLS in modeling the strokw prevalence for this data set.</p>
+</section>
+</section>
+<section id="conclusion-and-future-work" class="level2">
+<h2 class="anchored" data-anchor-id="conclusion-and-future-work">6. Conclusion and Future Work</h2>
+<p>This report has demonstrated both the theoretical foundations and practical advantages of QR as a robust and flexible alternative to OLS. Unlike OLS, which estimates only the conditional mean and can be heavily influenced by skewness, or heteroscedasticity, QR provides a complete picture of how predictors affect different parts of the outcome distribution. Through simulations with skewed and heteroscedastic errors, we showed that quantile regression maintains reliable performance where OLS assumptions are violated to certain levels of skewness and heteroscedasticity. In the case of skewness at 2.5 and 3, QR is more robust compared to OLS. More test should be done to assess the performance of OLS and QR at higher skewness levels.</p>
+<p>In the real-world application to 2022 U.S. county-level stroke prevalence data, the comparison between OLS and QR, QR reveals meaningful heterogeneity that would have been missed by OLS alone: diabetes prevalence has a substantially stronger effect in high-stroke counties, while physical inactivity prevalence and smoke prevalence shows the opposite pattern in general.</p>
+<p>These findings underscore the value of QR in public health research, where understanding effects at the tails of the distribution, e.g., high-risk population, is often more action-relevant than the average effect. While the analysis is limited to face value of the data, it illustrates how QR can uncover complex relationships and overcome misleading conclusions drawn from mean-based models.</p>
+<p>In summary, QR is not merely an extension of OLS but a powerful tool that better reflects real-world data complexities. By moving beyond the mean, researchers can gain deeper, more actionable insights into the drivers of health outcomes. Future work from this project can be investigating the fit of OLS and QR on larger sample size and more levels of skewness.</p>
+<section id="disclaimer" class="level4">
+<h4 class="anchored" data-anchor-id="disclaimer">Disclaimer</h4>
+<p>Grok.com was used to help with coding.</p>
 </section>
 </section>
 <section id="references" class="level2 unnumbered">
@@ -587,8 +588,29 @@ Figure&nbsp;10: Slope Estimates between OLS vs.&nbsp;QR on Different Quantile Le
 </section>
 
 <div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" role="doc-bibliography" id="quarto-bibliography"><h2 class="anchored quarto-appendix-heading">References</h2><div id="refs" class="references csl-bib-body hanging-indent" role="list">
+<div id="ref-akinwande2015variance" class="csl-entry" role="listitem">
+<span class="nocase">Akinwande, Michael Olusegun, Hussaini Garba Dikko, Agboola Samson, et al.</span> 2015. <span>“Variance Inflation Factor: As a Condition for the Inclusion of Suppressor Variable (s) in Regression Analysis.”</span> <em>Open Journal of Statistics</em> 5 (7): 754–67.
+</div>
+<div id="ref-bickel1981some" class="csl-entry" role="listitem">
+Bickel, Peter J, and David A Freedman. 1981. <span>“Some Asymptotic Theory for the Bootstrap.”</span> <em>The Annals of Statistics</em> 9 (6): 1196–217.
+</div>
 <div id="ref-Burton2006" class="csl-entry" role="listitem">
 Burton, Andrea, Douglas G. Altman, Patrick Royston, and Roger L. Holder. 2006. <span>“The Design of Simulation Studies in Medical Statistics.”</span> <em>Statistics in Medicine</em> 25 (24): 4279–92. <a href="https://doi.org/10.1002/sim.2673">https://doi.org/10.1002/sim.2673</a>.
+</div>
+<div id="ref-strokeexplain" class="csl-entry" role="listitem">
+CDC. 2024a. <em>Health Outcomes</em>. US Centers for Disease Control; Prevention. <a href="https://www.cdc.gov/places/measure-definitions/health-outcomes.html">https://www.cdc.gov/places/measure-definitions/health-outcomes.html</a>.
+</div>
+<div id="ref-cdc2024strokefacts" class="csl-entry" role="listitem">
+CDC. 2024b. <em>Stroke Facts</em>. US Centers for Disease Control; Prevention. <a href="https://www.cdc.gov/stroke/data-research/facts-stats/index.html">https://www.cdc.gov/stroke/data-research/facts-stats/index.html</a>.
+</div>
+<div id="ref-cdc_places_county_2024" class="csl-entry" role="listitem">
+CDC. n.d. <span>“PLACES: Local Data for Better Health, County Data (2024 Release).”</span> US Centers for Disease Control; Prevention. <a href="https://data.cdc.gov/500-Cities-Places/PLACES-Local-Data-for-Better-Health-County-Data-20/fu4u-a9bh/about_data">https://data.cdc.gov/500-Cities-Places/PLACES-Local-Data-for-Better-Health-County-Data-20/fu4u-a9bh/about_data</a>.
+</div>
+<div id="ref-countyhealthrankings" class="csl-entry" role="listitem">
+County Health Rankings &amp; Roadmaps. n.d. <em>National Data &amp; Documentation: 2010–2023</em>. <a href="https://www.countyhealthrankings.org/health-data/methodology-and-sources/data-documentation/national-data-documentation-2010-2023">https://www.countyhealthrankings.org/health-data/methodology-and-sources/data-documentation/national-data-documentation-2010-2023</a>.
+</div>
+<div id="ref-heskes1996practical" class="csl-entry" role="listitem">
+Heskes, Tom. 1996. <span>“Practical Confidence and Prediction Intervals.”</span> <em>Advances in Neural Information Processing Systems</em> 9.
 </div>
 <div id="ref-simulation" class="csl-entry" role="listitem">
 Howard, Marjorie. 2018. <span>“Comparison of the Performance of Simple Linear Regression and Quantile Regression with Non-Normal Data: A Simulation Study.”</span> Master's thesis, University of South Carolina. <a href="https://scholarcommons.sc.edu/etd/4517/">https://scholarcommons.sc.edu/etd/4517/</a>.

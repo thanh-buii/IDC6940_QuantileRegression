@@ -6,7 +6,7 @@ editor: visual
 
 Simulate data for Linear quantile regression
 
-Heteroskedastic error with increasing variance simulation
+heteroscedastic error with increasing variance simulation
 
 OLS
 
@@ -39,7 +39,6 @@ slope_func <- function(data, indices) {
   coef(fit)[2]
 }
 ```
-
 
 ```{r eval = T, warning = F, message = F}
 # Looping areaaaaaaaa
@@ -114,7 +113,6 @@ ols_qr_heteroscedastic <- bind_rows(ols_qr_heteroscedastic)
 head(ols_qr_heteroscedastic, n = 6)
 ```
 
-
 ```{r}
 models <- unique(ols_qr_heteroscedastic$Model)
 
@@ -124,7 +122,7 @@ slope_all_heter <- ggplot(ols_qr_heteroscedastic,
   geom_boxplot() +
   geom_hline(data = distinct(ols_qr_heteroscedastic, Model, True_Slope),
              aes(yintercept = True_Slope, color = Model), linewidth = 0.8) +
-  labs(title = "Estimated vs True Slopes)",
+  labs(title = "Estimated vs True Slopes",
        x = "Sample Size", y = "Estimated Slope") +
   theme_minimal() +
   theme(legend.position = "bottom")
@@ -132,7 +130,6 @@ slope_all_heter <- ggplot(ols_qr_heteroscedastic,
 print(slope_all_heter)
 saveRDS(slope_all_heter, "slope_all_heter.rds")
 ```
-
 
 ```{r}
 for (mod in models) {
@@ -176,8 +173,6 @@ for (mod in models) {
 }
 ```
 
-
-
 ```{r}
 bias_heter <- ggplot(ols_qr_heteroscedastic, aes(x = factor(Sample_Size), y = Bias, fill = Model)) +
   geom_boxplot() +
@@ -186,6 +181,7 @@ bias_heter <- ggplot(ols_qr_heteroscedastic, aes(x = factor(Sample_Size), y = Bi
 print(bias_heter)
 saveRDS(bias_heter, "Bias_all_heter.rds")
 ```
+
 ```{r}
 power_coverage_heter <- ols_qr_heteroscedastic %>%
   group_by(Sample_Size, Model) %>%
@@ -467,7 +463,6 @@ typeI_dfhe %>%
   arrange(Sample_Size, Model)
 ```
 
-
 ```{r eval = T, warning = F, message = F}
 typei_2models_he <- ggplot(typeI_dfhe, aes(x = factor(Sample_Size), y = TypeI_Error, color = Model)) +
   geom_point(size = 3) +
@@ -489,4 +484,3 @@ typei_2models_he
 
 ```{r eval = T, warning = F, message = F}
 ```
-
