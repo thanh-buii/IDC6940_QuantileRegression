@@ -299,7 +299,7 @@ These findings underscore the value of QR in public health research, where under
 
 In summary, QR is not merely an extension of OLS but a powerful tool that better reflects real-world data complexities. By moving beyond the mean, researchers can gain deeper, more actionable insights into the drivers of health outcomes. Future work from this project can be investigating the fit of OLS and QR on larger sample size and more levels of skewness.
 
-#### Disclaimer
+## Disclaimer
 Grok.com was used to help with coding.
 ```{r}
 
