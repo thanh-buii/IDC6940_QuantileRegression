@@ -158,7 +158,7 @@ saveRDS(plot.dist, "plot.dist.rds")
 
 ### Data Modeling
 
-With same linear formula, the results of fitting OLS and median regression are as follows. Both of models illustrate that obesity is uninfluential on STROKE prevalence. Adult smoking prevalence and diabetes prevalence show strong positive associations with stroke rates, while air pollution exhibit a significant negative association. The coefficients between two models are very similar, for example, smoking prevalence is OLS: 10.91 and QR: 11.02, and diabetes prevalence is  QR: 13.51 and OLS: 14.40 in OLS, suggesting that its effect on the typical county is somewhat weaker than its influence on the mean. The intercept was also slightly lower in the median regression (1.01 vs. 1.10), which is expected given the right-skewed distribution of stroke prevalence. These findings suggest that while OLS provides a good overall fit, quantile regression at the median offers more robust estimates in the presence of right-skewed outcome variable.
+
 
 ```{r}
 ols_model <- lm(STROKE ~ smoke + diabetes_prev + physical_inactive, 
@@ -192,22 +192,10 @@ This table shows a row by row coefficient values of two models.
 # 
 # print(comparison)
 ```
-Model performance is evaluated using MAE and RMSE. The quantile regression at the median shows a slightly lower MAE (0.4761) than OLS (0.4780), suggesting marginally better prediction for typical observations (US counties). These results confirm that although both models yield similar conclusions, quantile regression at the median is more robust to the right-skewed nature of stroke prevalence. Although RMSE of OLS is lower than median regression, it should only be meaningful if the outcome variable has normal distribution.
 
 
 ### Coefficient Heterogeneity Plot
 
-Since we have confirm that median regression provides close fit as OLS. In this section, we will check for coefficient homogeneity across the SMOKE prevalence. The figures below visualize how the estimated effects of each predictor vary across the distribution of stroke rates, $\tau^{th} = 0.25, 0.50, 0.75, 0.90$, compared to the single OLS estimate (horizontal dashed lines). This plot directly illustrates the heterogeneity that OLS misses due to the right-skewed nature of stroke prevalence 
-
-Diabetes_prev shows the clearest heterogeneity. The effect strengthens dramatically as we move to higher quantiles: from approximately 10.5 percentage points at the 25th percentile to over 21 percentage points at the 90th percentile. Since the OLS coefficient estimate (≈ 14.4) lies in the middle constantly, it understates the increasing impact in high-stroke counties and overstates it in low-stroke counties. This suggests diabetes is a particularly strong driver in counties that already have elevated stroke rates.
-
-Smoke exhibits the opposite pattern. The effect is strongest at lower quantiles (≈ 11.6 at 0.25) and weakens substantially at higher quantiles (dropping to ≈ 9.5 at 0.90). The OLS estimate (≈ 10.9) again represents an average effect, not the actually changing trend of smoke
-
-Air_pollution displays least heterogeneity, although QR still shows more fluctuate effect of air_pollution on STROKE while OLS displays unchangable influence. The negative association becomes stronger from 0.25 (≈ –0.07) to 0.75 (≈ –0.115), then slightly weakens at 0.90.
-
-Oobesity_prev shows essentially no heterogeneity and remains near zero across all quantiles, consistent with its non-significance in both OLS and median regression.
-
-Because stroke prevalence is right-skewed, OLS provides a single “average” effect that is pulled by extreme high-stroke counties. Meanwhile, quantile regression reveals the actually heterogeneity: diabetes has a much larger impact in the upper tail (where stroke rates are already high), while smoking has a relatively larger effect among lower-stroke counties. These patterns would be completely invisible using OLS alone.
 
 ```{r}
 taus <- c(0.25, 0.5, 0.75, 0.90)
