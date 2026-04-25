@@ -78,7 +78,7 @@ $$
 
 #### 2.2.2 Application on Stroke Prevalence
 
-Different from the simulation, I will compare the performance between OLS and QR based on the coverage of their prediction intervals [@heskes1996practical]. Prediction interval is the range of future values based on the percentage of confidence interval. In this project, the number of observations fall within the prediction interval should be approximately equal to prediction range if the model fits correctly. For instance, for 70% prediction interval, I would expect approximately 70% of the observations, i.e., 70% coverage of the observations on an interval, fall within this range. There are four intervals in this project, 50%, 70%, 80% and 90% to illustrate the coverage behaviors of OLS and QR. To assess the uncertainty, the 90% confidence interval of these prediction ranges are also added.
+Different from the simulation, I will compare the performance between OLS and QR based on the coverage of their prediction intervals [@heskes1996practical]. Prediction interval is the range of future values based on the percentage of confidence interval. In this project, the number of observations fall within the prediction interval should be approximately equal to prediction range if the model fits correctly. For instance, for 70% prediction interval, I would expect approximately 70% of the observations, i.e., 70% coverage of the observations on an interval, fall within this range. There are four intervals in this project, 50%, 70%, 80% and 90% to illustrate the coverage behaviors of OLS and QR.
 
 ## 3. Simulation
 ```{r eval = T, warning = F, message = F}
