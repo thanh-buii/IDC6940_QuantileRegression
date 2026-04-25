@@ -301,5 +301,8 @@ In summary, QR is not merely an extension of OLS but a powerful tool that better
 
 #### Disclaimer
 Grok.com was used to help with coding.
+```{r}
+
+```
 
 ## References

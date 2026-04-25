@@ -16,6 +16,7 @@ library(car)
 library(quantreg)
 library(corrplot)
 library(ggplot2)
+library(sf)
 ```
 
 
@@ -145,7 +146,7 @@ plot.dist <- ggplot(data, aes(x = diabetes_prev, y = STROKE)) +
       "0.9"  = "90th Percentile"
     )
   ) +
-  labs(title = "Distribution at multiple qunatiles vs. OLS",
+  labs(title = "Distribution of QR vs. OLS on Increasing Percentile",
        x = "X", y = "Y") +
   theme_minimal()
 
@@ -237,7 +238,7 @@ coef.stroke <- ggplot(coef_table, aes(x = tau, y = estimate, color = term, group
              aes(yintercept = estimate, color = term), linetype = "dashed") +
   facet_wrap(~ term, scales = "free_y") +
   labs(title = "Coefficient Heterogeneity Across Quantiles vs OLS (dashed)",
-       x = "Quantile", y = "Estimate") +
+       x = "Percentile", y = "Estimate") +
   theme_minimal()
 
 coef.stroke
