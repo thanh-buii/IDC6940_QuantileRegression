@@ -108,9 +108,6 @@ cor.stroke
 saveRDS(cor.stroke, "cor.stroke.rds")
 ```
 
-Next, we plot the histogram of STROKE to see the behavior of the distribution. With longer right tailed, STROKE is positive skewed. Since positive skewness violates the requirement of OLS, we will still fit STROKE by OLS and Median regression to compare the robustness. Though there is skewness, STROKE still has a bell shape very close to normal distribution. Thus, in this analysis, we expect to have similar results between fitting OLS and median regression.
-
-Since we suspect there is at least one multicollinearity, we perform vif test on several models, with and without physical_inactive or diabetes_prev. For the full model, vif(physical_inactive) surpasses 5, the recommend threhold to detect multicollinearity. The second model vif of all variables improves once physical_inactive is removed. The third model with diabetes_prev removed does not show much vif improvement even though multicollinearity is removed. Therefore, model two will be used to fit OLS and median regression.
 ```{r}
 model_vif <- lm(STROKE ~ smoke + diabetes_prev + obesity_prev + physical_inactive, data = data)
 summary(model_vif)
@@ -161,7 +158,7 @@ saveRDS(plot.dist, "plot.dist.rds")
 
 
 ```{r}
-ols_model <- lm(STROKE ~ smoke + diabetes_prev + physical_inactive, 
+ols <- lm(STROKE ~ smoke + diabetes_prev + physical_inactive, 
                 data = data)
 
 qr_median <- rq(STROKE ~ smoke + diabetes_prev + physical_inactive, 
@@ -205,12 +202,12 @@ qr_multi <- rq(STROKE ~ smoke + diabetes_prev + physical_inactive,
 
 coef_table <- tidy(qr_multi, se.type = "nid") %>%
   mutate(
-    estimate = round(estimate,  4),
+    estimate = round(estimate, 4),
     std.error = round(std.error, 4),
-    p.value = round(p.value,   4)
+    p.value = round(p.value, 4)
   ) %>%
   filter(term != "(Intercept)") %>%
-  select(tau, term, estimate, std.error, p.value) %>%
+  select(tau, term, estimate) %>%
   arrange(term, tau)
 
 print(coef_table)
