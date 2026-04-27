@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Ngoc Bui (Advisor: Dr.&nbsp;Cohen)">
-<meta name="dcterms.date" content="2026-04-24">
+<meta name="dcterms.date" content="2026-04-27">
 
 <title>Quantile Regression in Practice: Simulation, and an Application to Stroke Prevalence</title>
 <style>
@@ -152,7 +152,7 @@ window.Quarto = {
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">April 24, 2026</p>
+      <p class="date">April 27, 2026</p>
     </div>
   </div>
   
@@ -202,8 +202,8 @@ Power = \frac{1}{Simulations} \sum_{1}^{simulations} I(p\_value &lt; 0.05), \tex
 \end{cases}
 \]</span> <span class="math display">\[
 Coverage = \frac{1}{Simulations}\sum_{1}^{simulations} I(LB_{95} &lt; slope &lt; UP_{95})
-\]</span> Another performance metric, also introduced in <span class="citation" data-cites="muthen2002use">(<a href="#ref-muthen2002use" role="doc-biblioref">Muthén and Muthén 2002</a>)</span> is the empirical Type I error rate. It is defined exactly as the Power Percentage but based on the true slope is 0. Thus, when the simulation function has no slope, Type I error computes the proportion of models returning non-zero slope. <span class="math display">\[
-\text{Type I error} = \frac{1}{Simulations}\sum_{1}^{simulations} I(p_value &lt; 0.05)
+\]</span> Another performance metric, also introduced in <span class="citation" data-cites="muthen2002use">(<a href="#ref-muthen2002use" role="doc-biblioref">Muthén and Muthén 2002</a>)</span> is the empirical Type I error rate. It is defined exactly as the Power Percentage but based on the true slope is 0. Thus, when the simulation function has no slope, Type I error computes the proportion of models returning non-zero slope. This means that a test returns false positive result if it rejects the null hypothesis of zero slope. <span class="math display">\[
+\text{Type I error} = \frac{1}{Simulations}\sum_{1}^{simulations} I(p\_value &lt; 0.05)
 \]</span></p>
 </section>
 <section id="application-on-stroke-prevalence" class="level4">
@@ -220,8 +220,7 @@ Coverage = \frac{1}{Simulations}\sum_{1}^{simulations} I(LB_{95} &lt; slope &lt;
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(patchwork)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
-<p>This section provides a comprehensive comparison between OLS and QR on simple linear equation, as a replication of <span class="citation" data-cites="simulation">(<a href="#ref-simulation" role="doc-biblioref">Howard 2018</a>)</span>. This study employs a Monte Carlo simulation <span class="citation" data-cites="Montecarlomath2019">(<a href="#ref-Montecarlomath2019" role="doc-biblioref">Morris et al. 2019</a>)</span> to compare the finite-sample performance of OLS and QR when errors deviate from normality. The key design steps are: Key design steps are identify the goal, e.g.&nbsp;to compare OLS and QR, specify the model, e.g.&nbsp;the linear function, decide the varying factors, e.g.&nbsp;sample sizes and the non-normal error terms, pick the number of replication, which is also often called simulations, and choose the performance criteria <span class="citation" data-cites="Burton2006">(<a href="#ref-Burton2006" role="doc-biblioref">Burton et al. 2006</a>)</span>.</p>
-<p>The two non-normal behaviors are:</p>
+<p>This section provides a comprehensive comparison between OLS and QR on simple linear equation, as a replication of <span class="citation" data-cites="simulation">(<a href="#ref-simulation" role="doc-biblioref">Howard 2018</a>)</span>. This study employs a Monte Carlo simulation <span class="citation" data-cites="Montecarlomath2019">(<a href="#ref-Montecarlomath2019" role="doc-biblioref">Morris et al. 2019</a>)</span> to compare the finite-sample performance of OLS and QR when errors deviate from normality. The key design steps are: Key design steps are identify the goal, e.g.&nbsp;to compare OLS and QR, specify the model, e.g.&nbsp;the linear function, decide the varying factors, e.g.&nbsp;sample sizes and the non-normal error terms, pick the number of replication, which is also often called simulations, and choose the performance criteria <span class="citation" data-cites="Burton2006">(<a href="#ref-Burton2006" role="doc-biblioref">Burton et al. 2006</a>)</span>. The two non-normal behaviors are:</p>
 <ul>
 <li>Positive skewed to the right with multiple skewness levels.</li>
 <li>Increasing variance as predictor increases.</li>
@@ -568,7 +567,7 @@ Table&nbsp;1: Prediction Interval between OLS and QRs on Stroke Prevalence
 <section id="stroke-prevalence" class="level3">
 <h3 class="anchored" data-anchor-id="stroke-prevalence">5.3 Stroke Prevalence</h3>
 <p>The fitted models of OLS and QR at median are highly similar <a href="#sec-data-model" class="quarto-xref">Section&nbsp;4.2</a>. However, from <a href="#fig-coef-stroke" class="quarto-xref">Figure&nbsp;10</a>, OLS has flatted out the changing effect of each predictor on the stroke prevalence. Particularly, diabetes prevalence has higher impact on the counties with higher diagnosed stroke cases (higher percentiles). The effect goes from approximately 5 at <span class="math inline">\(25^{th}\)</span> percentile to over 20 unit at <span class="math inline">\(90^{th}\)</span> percentile, which is more than 3 times influence on lower stroke rate counties. Meanwhile, physical inactivity prevalence has the opposite effect from diabetes prevalence. From counties with lower to higher stroke prevalence, the effect of the physical inactivity prevalence declines. At some point, the effect is dismissed (at 0), then has a negative influence on the stroke prevalence. Smoke prevalence has both increasing and decreasing impact on the stroke outcome. As the percentile increases, the effect increases, but it drops by 2 units as the percentile exceeds <span class="math inline">\(75^{th}\)</span>. With OLS alone, these behaviors of the predictors will be overlooked. One can conclude that counties with high diagnosed stroke rate may need to investigate the diabetes rate in order to prevent future stroke.</p>
-<p>Another comparison between OLS and QR is through prediction interval <a href="#tbl-prediction" class="quarto-xref">Table&nbsp;1</a>. We expect the percentage of stroke prevalence of each prediction interval to be equal to its range. At the first two interval, 50%, and 70%, both OLS and QR at median returns the ranges that cover approximately 50% and 70% of the stroke prevalence. However, while QR consistently cover similar percent of stroke outcome and their intervals, OLS prediction ranges cover more than the expected number. For example, OLS cover 85.16% and 99.26% of the stroke prevalence in its 80% and 90% interval. These two coverage rates exceed by 5% and 9% from the range, which hints at the over fitting. Thus, based on the non-constant effect of predictor and good coverage rate in prediction interval, QR surpasses OLS in modeling the stroke prevalence for this data set.</p>
+<p>Another comparison between OLS and QR is through prediction interval <a href="#tbl-prediction" class="quarto-xref">Table&nbsp;1</a>. We expect the percentage of stroke prevalence of each prediction interval to be equal to its range. At the first two interval, 50%, and 70%, both OLS and QR at median returns the ranges that cover approximately 50% and 70% of the stroke prevalence. However, while QR consistently cover similar percent of stroke outcome and their intervals, OLS prediction ranges cover more than the expected number. For example, OLS cover 85.16% and 99.26% of the stroke prevalence in its 80% and 90% interval. These two coverage rates exceed by 5% and 9% from the range, which hints OLS is over fitting. Thus, based on the non-constant effect of predictor and good coverage rate in prediction interval, QR surpasses OLS in modeling the stroke prevalence for this data set.</p>
 </section>
 </section>
 <section id="conclusion-and-future-work" class="level2">
@@ -580,7 +579,7 @@ Table&nbsp;1: Prediction Interval between OLS and QRs on Stroke Prevalence
 </section>
 <section id="disclaimer" class="level2">
 <h2 class="anchored" data-anchor-id="disclaimer">Disclaimer</h2>
-<p>Grok.com was used to help with coding.</p>
+<p>Grok.com was used to fix coding error.</p>
 </section>
 <section id="references" class="level2 unnumbered">
 
