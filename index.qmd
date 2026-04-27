@@ -279,7 +279,7 @@ From @fig-homo-heter1, we can confirm that the regression line at different perc
 
 Next, the power percentage in  @fig-power-cover-heter converges to 100% as the sample size increases for all models. This showcases the models become more stable in larger sample sizes. Among them, OLS has the highest power percentage in general. The coverage percentage also illustrates good outcome since all of the models coverage is within the 95% confidence interval. QR at $75^{th}$ percentile has the greatest fluctuation; however, its rate is still within the confidence interval at the end. Although a few models have coverage percentage lightly below the range, the gaps are very small, and we can consider them within the confidence interval.
 
-Lastly, almost all of the type I error rate are within the 95% confidence interval of the 5% false positive rate. There are a few times the Qr models have higher or lower error rate than the range. However, since the gaps are small, we can still consider them within the 95% range. Therefore, both OLS and QR fits the data well. Since the variance is heteroscedastic, QR at median should be used in place of OLS.
+Lastly, almost all of the type I error rate are within the 95% confidence interval of the 5% false positive rate. There are a few times the Qr models have higher or lower error rate than the range. However, since the gaps are small, we can still consider them within the 95% range. Therefore, both OLS and QR fits the data well. Besides, since the variance is heteroscedastic, QR at median should be used as a more optimal option to OLS.
 
 ### 5.3 Stroke Prevalence
 
